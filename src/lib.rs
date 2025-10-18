@@ -48,7 +48,7 @@
 //!
 //! ### Basic Synchronous Retry
 //! ```rust
-//! use prism3_retry::{RetryBuilder, RetryDelayStrategy};
+//! use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
 //! use std::time::Duration;
 //!
 //! // Basic retry configuration
@@ -59,16 +59,19 @@
 //!     .on_retry(|event| println!("Retry attempt {}", event.attempt_count()))
 //!     .build();
 //!
-//! // Execute retry operation
-//! let result = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-//!     // Operation that may fail
+//! // 使用 RetryResult 类型别名简化返回类型
+//! let result: RetryResult<String> = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+//!     // 可以使用 ? 操作符，io::Error 会自动通过 From trait 转换为 RetryError
+//!     // 例如: std::fs::read_to_string("config.txt")?;
 //!     Ok("SUCCESS".to_string())
-//! }).unwrap();
+//! });
+//!
+//! assert!(result.is_ok());
 //! ```
 //!
 //! ### Async Retry with Timeout Control
 //! ```rust,no_run
-//! use prism3_retry::RetryBuilder;
+//! use prism3_retry::{RetryBuilder, RetryResult};
 //! use std::time::Duration;
 //!
 //! # async fn example() {
@@ -79,11 +82,15 @@
 //!     .set_max_duration(Some(Duration::from_secs(30)))      // Max 30 seconds total
 //!     .build();
 //!
-//! // Execute async retry operation (with real timeout interruption)
-//! let result = executor.run_async(|| async {
-//!     // Async operation that will be truly interrupted on timeout
+//! // 使用 RetryResult 简化异步函数的返回类型
+//! let result: RetryResult<String> = executor.run_async(|| async {
+//!     // 异步操作超时会被真正中断
+//!     // 可以使用 ? 操作符，错误会自动转换
+//!     // 例如: tokio::fs::read_to_string("config.txt").await?;
 //!     Ok("SUCCESS".to_string())
 //! }).await;
+//!
+//! assert!(result.is_ok());
 //! # }
 //! ```
 //!
@@ -98,7 +105,7 @@ pub mod config;
 pub mod default_config;
 pub mod delay_strategy;
 pub mod error;
-pub mod events;
+pub mod event;
 pub mod executor;
 pub mod simple_config;
 
@@ -108,7 +115,7 @@ pub use config::RetryConfig;
 pub use default_config::DefaultRetryConfig;
 pub use delay_strategy::RetryDelayStrategy;
 pub use error::RetryError;
-pub use events::{
+pub use event::{
     AbortEvent, AbortReason, FailureEvent, RetryDecision, RetryEvent, RetryReason, SuccessEvent,
 };
 pub use executor::RetryExecutor;
