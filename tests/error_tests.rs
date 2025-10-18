@@ -292,3 +292,28 @@ fn test_retry_result_in_practice() {
     let error = result.unwrap_err();
     assert!(error.to_string().contains("Maximum attempts exceeded"));
 }
+
+/// Test OperationTimeout error creation and display
+#[test]
+fn test_operation_timeout_error() {
+    let duration = Duration::from_secs(10);
+    let timeout = Duration::from_secs(5);
+    let error = RetryError::operation_timeout(duration, timeout);
+    let error_msg = error.to_string();
+    assert!(error_msg.contains("Operation timeout"));
+    assert!(error_msg.contains("10s"));
+    assert!(error_msg.contains("5s"));
+}
+
+/// Test OperationTimeout error with enum constructor
+#[test]
+fn test_operation_timeout_enum_variant() {
+    let error = RetryError::OperationTimeout {
+        duration: Duration::from_secs(10),
+        timeout: Duration::from_secs(5),
+    };
+    let error_msg = error.to_string();
+    assert!(error_msg.contains("Operation timeout"));
+    assert!(error_msg.contains("10s"));
+    assert!(error_msg.contains("5s"));
+}

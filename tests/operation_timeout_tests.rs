@@ -140,8 +140,10 @@ async fn test_async_operation_timeout_true_interruption() {
         .run_async(|| {
             let attempt_count = attempt_count_clone.clone();
             async move {
-                let mut count = attempt_count.lock().unwrap();
-                *count += 1;
+                {
+                    let mut count = attempt_count.lock().unwrap();
+                    *count += 1;
+                }
 
                 // Simulate long-running operation (will be interrupted by timeout)
                 tokio::time::sleep(Duration::from_millis(500)).await;
@@ -222,10 +224,11 @@ async fn test_async_operation_timeout_with_retry() {
         .run_async(|| {
             let attempt_count = attempt_count_clone.clone();
             async move {
-                let mut count = attempt_count.lock().unwrap();
-                *count += 1;
-                let current_attempt = *count;
-                drop(count);
+                let current_attempt = {
+                    let mut count = attempt_count.lock().unwrap();
+                    *count += 1;
+                    *count
+                };
 
                 if current_attempt < 3 {
                     // First two times timeout
@@ -276,9 +279,7 @@ fn test_operation_timeout_config_from_file() {
     use prism3_retry::DefaultRetryConfig;
 
     let mut config = Config::new();
-    config
-        .set("retry.max_attempts", 3u32)
-        .unwrap();
+    config.set("retry.max_attempts", 3u32).unwrap();
     config
         .set("retry.operation_timeout_millis", 100u64)
         .unwrap();
@@ -318,4 +319,3 @@ fn test_operation_timeout_event_listening() {
     // Should have triggered 2 retry events (retry after first failure, retry after second failure)
     assert_eq!(*retry_count.lock().unwrap(), 2);
 }
-

@@ -666,7 +666,7 @@ fn test_jitter_factor_getter() {
     let builder = RetryBuilder::<TestResult>::new();
     let jitter = builder.jitter_factor();
     assert!(
-        jitter >= 0.0 && jitter <= 1.0,
+        (0.0..=1.0).contains(&jitter),
         "Jitter factor should be between 0 and 1"
     );
 }
@@ -751,4 +751,52 @@ fn test_default_trait() {
 
     assert_eq!(builder1.max_attempts(), builder2.max_attempts());
     assert_eq!(builder1.max_duration(), builder2.max_duration());
+}
+
+// ==================== Additional edge case tests ====================
+
+#[test]
+fn test_failed_on_error_single_type() {
+    use std::io::Error as IoError;
+
+    let builder = RetryBuilder::<TestResult>::new().failed_on_error::<IoError>();
+
+    // Verify config successful
+    assert_eq!(builder.max_attempts(), 5);
+}
+
+#[test]
+fn test_abort_on_error_single_type() {
+    use std::io::Error as IoError;
+
+    let builder = RetryBuilder::<TestResult>::new().abort_on_error::<IoError>();
+
+    // Verify config successful
+    assert_eq!(builder.max_attempts(), 5);
+}
+
+#[test]
+fn test_failed_on_result_single() {
+    let builder =
+        RetryBuilder::<TestResult>::new().failed_on_result(TestResult("ERROR".to_string()));
+
+    // Verify config successful
+    assert_eq!(builder.max_attempts(), 5);
+}
+
+#[test]
+fn test_abort_on_result_single() {
+    let builder =
+        RetryBuilder::<TestResult>::new().abort_on_result(TestResult("ABORT".to_string()));
+
+    // Verify config successful
+    assert_eq!(builder.max_attempts(), 5);
+}
+
+#[test]
+fn test_abort_on_all_errors() {
+    let builder = RetryBuilder::<TestResult>::new().abort_on_all_errors();
+
+    // Verify config successful
+    assert_eq!(builder.max_attempts(), 5);
 }
