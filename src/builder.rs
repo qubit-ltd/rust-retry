@@ -88,10 +88,16 @@ pub struct RetryBuilder<T, C: RetryConfig = DefaultRetryConfig> {
     /// Predicate for result conditions that need to be aborted
     abort_condition: ConditionPredicate<T>,
 
-    /// Event listeners
+    /// Retry event listener, triggered after each retry attempt fails
     on_retry: Option<RetryEventListener<T>>,
+
+    /// Success event listener, triggered when operation completes successfully
     on_success: Option<SuccessEventListener<T>>,
+
+    /// Failure event listener, triggered when operation ultimately fails after all retries
     on_failure: Option<FailureEventListener<T>>,
+
+    /// Abort event listener, triggered when operation is aborted
     on_abort: Option<AbortEventListener<T>>,
 }
 
