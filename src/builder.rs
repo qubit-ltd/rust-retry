@@ -19,13 +19,22 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::time::Duration;
 
-use super::events::{
+use prism3_function::predicate::{BoxPredicate, Predicate};
+
+use super::event::{
     AbortEventListener, FailureEventListener, RetryEventListener, SuccessEventListener,
 };
 use super::{
     AbortEvent, AbortReason, DefaultRetryConfig, FailureEvent, RetryConfig, RetryDecision,
     RetryDelayStrategy, RetryEvent, RetryReason, SuccessEvent,
 };
+
+/// Condition predicate type for result evaluation
+///
+/// Uses `BoxPredicate` for single ownership predicate evaluation.
+/// Since RetryBuilder follows the builder pattern and is designed for single-threaded use,
+/// Box is more appropriate than Arc, avoiding unnecessary reference counting overhead.
+type ConditionPredicate<T> = Option<BoxPredicate<T>>;
 
 /// Retry Builder
 ///
@@ -68,7 +77,7 @@ pub struct RetryBuilder<T, C: RetryConfig = DefaultRetryConfig> {
     failed_results: HashSet<T>,
 
     /// Predicate for result conditions that need to be retried
-    failed_condition: Option<Box<dyn Fn(&T) -> bool + Send + Sync>>,
+    failed_condition: ConditionPredicate<T>,
 
     /// Set of error type IDs that need to be aborted
     abort_error_types: HashSet<TypeId>,
@@ -77,7 +86,7 @@ pub struct RetryBuilder<T, C: RetryConfig = DefaultRetryConfig> {
     abort_results: HashSet<T>,
 
     /// Predicate for result conditions that need to be aborted
-    abort_condition: Option<Box<dyn Fn(&T) -> bool + Send + Sync>>,
+    abort_condition: ConditionPredicate<T>,
 
     /// Event listeners
     on_retry: Option<RetryEventListener<T>>,
@@ -386,11 +395,15 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **replace** the failure condition set through `failed_on_results_if`.
     /// **No cumulative effect.**
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxPredicate` from `prism3-function` for single ownership predicate evaluation.
     pub fn failed_on_results_if<F>(mut self, condition: F) -> Self
     where
-        F: Fn(&T) -> bool + Send + Sync + 'static,
+        F: Fn(&T) -> bool + 'static,
     {
-        self.failed_condition = Some(Box::new(condition));
+        self.failed_condition = Some(BoxPredicate::new(condition));
         self
     }
 
@@ -423,6 +436,20 @@ where
         self
     }
 
+    /// Explicitly configure abort for all errors
+    ///
+    /// Calling this method will abort on all errors, immediately stopping the retry process.
+    /// This is useful when you want to fail fast on any error without retrying.
+    ///
+    /// **⚠️ Important: Override Semantics**
+    /// This method will **clear** all abort errors set through other `abort_on_error` methods,
+    /// and then configure to abort on all error types. **No cumulative effect.**
+    pub fn abort_on_all_errors(mut self) -> Self {
+        self.abort_error_types.clear();
+        self.abort_error_types.insert(TypeId::of::<dyn Error>());
+        self
+    }
+
     /// Set result that needs to abort retry
     ///
     /// If the return value of the operation equals the specified abort result, the operation should abort retry and will not continue trying.
@@ -451,11 +478,15 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **replace** the abort condition set through `abort_on_results_if`.
     /// **No cumulative effect.**
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxPredicate` from `prism3-function` for single ownership predicate evaluation.
     pub fn abort_on_results_if<F>(mut self, condition: F) -> Self
     where
-        F: Fn(&T) -> bool + Send + Sync + 'static,
+        F: Fn(&T) -> bool + 'static,
     {
-        self.abort_condition = Some(Box::new(condition));
+        self.abort_condition = Some(BoxPredicate::new(condition));
         self
     }
 
@@ -474,33 +505,48 @@ where
     /// - Track retry count and failure reasons
     /// - Send alert notifications
     /// - Execute custom retry logic
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
     pub fn on_retry<F>(mut self, listener: F) -> Self
     where
-        F: Fn(RetryEvent<T>) + Send + Sync + 'static,
+        F: Fn(&RetryEvent<T>) + Send + Sync + 'static,
     {
-        self.on_retry = Some(Box::new(listener));
+        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+        self.on_retry = Some(BoxReadonlyConsumer::new(listener));
         self
     }
 
     /// Set success event listener
     ///
     /// The success event listener is triggered when the operation completes successfully, whether it succeeds on the first attempt or after retries.
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
     pub fn on_success<F>(mut self, listener: F) -> Self
     where
-        F: Fn(SuccessEvent<T>) + Send + Sync + 'static,
+        F: Fn(&SuccessEvent<T>) + Send + Sync + 'static,
     {
-        self.on_success = Some(Box::new(listener));
+        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+        self.on_success = Some(BoxReadonlyConsumer::new(listener));
         self
     }
 
     /// Set failure event listener
     ///
     /// The failure event listener is triggered when the operation ultimately fails, i.e., after all retry attempts have failed.
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
     pub fn on_failure<F>(mut self, listener: F) -> Self
     where
-        F: Fn(FailureEvent<T>) + Send + Sync + 'static,
+        F: Fn(&FailureEvent<T>) + Send + Sync + 'static,
     {
-        self.on_failure = Some(Box::new(listener));
+        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+        self.on_failure = Some(BoxReadonlyConsumer::new(listener));
         self
     }
 
@@ -512,11 +558,16 @@ where
     /// Whether the abort listener is triggered depends on **whether the result is also defined as "failed"**:
     /// - **✅ Will trigger listener**: When the result matching abort condition **also matches failure condition**
     /// - **❌ Will not trigger listener**: When the result matching abort condition **does not match any failure condition**
+    ///
+    /// # Implementation Note
+    ///
+    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
     pub fn on_abort<F>(mut self, listener: F) -> Self
     where
-        F: Fn(AbortEvent<T>) + Send + Sync + 'static,
+        F: Fn(&AbortEvent<T>) + Send + Sync + 'static,
     {
-        self.on_abort = Some(Box::new(listener));
+        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+        self.on_abort = Some(BoxReadonlyConsumer::new(listener));
         self
     }
 
@@ -595,7 +646,7 @@ where
 
         // Check result condition
         if let Some(ref condition) = self.failed_condition {
-            if condition(result) {
+            if condition.test(result) {
                 return true;
             }
         }
@@ -612,7 +663,7 @@ where
 
         // Check result condition
         if let Some(ref condition) = self.abort_condition {
-            if condition(result) {
+            if condition.test(result) {
                 return true;
             }
         }
@@ -650,12 +701,6 @@ where
         }
     }
 
-    /// Get configuration
-    #[allow(dead_code)]
-    pub(crate) fn config(&self) -> &C {
-        &self.config
-    }
-
     /// Get event listeners
     pub(crate) fn retry_listener(&self) -> &Option<RetryEventListener<T>> {
         &self.on_retry
@@ -684,12 +729,20 @@ where
 }
 
 /// A non-existent error type, used to override default behavior
+///
+/// This is a sentinel type used only for its `TypeId` to mark the "disable error retry" state.
+/// It is never instantiated, so its `Display` implementation will never be called.
 #[derive(Debug)]
 struct NonExistentError;
 
 impl std::fmt::Display for NonExistentError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NonExistentError")
+    // NOTE: This method is required by the Error trait but will never be called in practice.
+    // NonExistentError is a sentinel type that is never instantiated - it's only used for
+    // its TypeId to mark the "disable error retry" state in the type system.
+    // The 3 uncovered lines here (including the function signature and body) are expected
+    // and documented as unreachable code that exists only to satisfy trait bounds.
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
     }
 }
 

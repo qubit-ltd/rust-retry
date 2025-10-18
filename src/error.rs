@@ -166,7 +166,11 @@ impl fmt::Display for RetryError {
                 attempts,
                 max_attempts,
             } => {
-                write!(f, "Maximum attempts exceeded: {} (max: {})", attempts, max_attempts)
+                write!(
+                    f,
+                    "Maximum attempts exceeded: {} (max: {})",
+                    attempts, max_attempts
+                )
             }
             RetryError::MaxDurationExceeded {
                 duration,

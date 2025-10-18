@@ -17,6 +17,8 @@
 use std::error::Error;
 use std::time::{Duration, Instant};
 
+use prism3_function::readonly_consumer::ReadonlyConsumer;
+
 use super::{
     AbortEvent, DefaultRetryConfig, FailureEvent, RetryBuilder, RetryConfig, RetryDecision,
     RetryError, RetryEvent, RetryReason, RetryResult, SuccessEvent,
@@ -58,7 +60,7 @@ use super::{
 /// ## Synchronous Retry (Post-Check Timeout)
 ///
 /// ```rust
-/// use prism3_retry::RetryBuilder;
+/// use prism3_retry::{RetryBuilder, RetryResult};
 /// use std::time::Duration;
 ///
 /// let executor = RetryBuilder::<String>::new()
@@ -66,8 +68,10 @@ use super::{
 ///     .set_operation_timeout(Some(Duration::from_secs(5)))
 ///     .build();
 ///
-/// let result = executor.run(|| {
-///     // Synchronous operation, timeout checked after completion
+/// // 使用 RetryResult 类型别名简化函数签名
+/// let result: RetryResult<String> = executor.run(|| {
+///     // 可以直接返回任何实现了 Into<RetryError> 的错误类型
+///     // 例如使用 ? 操作符处理 io::Error，会自动转换为 RetryError
 ///     std::thread::sleep(Duration::from_millis(100));
 ///     Ok("SUCCESS".to_string())
 /// });
@@ -76,7 +80,7 @@ use super::{
 /// ## Asynchronous Retry (Real Timeout Interruption)
 ///
 /// ```rust,no_run
-/// use prism3_retry::RetryBuilder;
+/// use prism3_retry::{RetryBuilder, RetryResult};
 /// use std::time::Duration;
 ///
 /// # async fn example() {
@@ -85,7 +89,8 @@ use super::{
 ///     .set_operation_timeout(Some(Duration::from_secs(5)))
 ///     .build();
 ///
-/// let result = executor.run_async(|| async {
+/// // 使用 RetryResult 让异步函数签名更清晰
+/// let result: RetryResult<String> = executor.run_async(|| async {
 ///     // Asynchronous operation, truly interrupted on timeout
 ///     tokio::time::sleep(Duration::from_millis(100)).await;
 ///     Ok("SUCCESS".to_string())
@@ -132,9 +137,12 @@ where
         if let Some(max_dur) = max_duration {
             let elapsed = start_time.elapsed();
             if elapsed >= max_dur {
-                let failure_event = FailureEvent::new(None, None, attempt, elapsed);
+                let failure_event = FailureEvent::builder()
+                    .attempt_count(attempt)
+                    .total_duration(elapsed)
+                    .build();
                 if let Some(listener) = self.builder.failure_listener() {
-                    listener(failure_event);
+                    listener.accept(&failure_event);
                 }
                 return Some(RetryError::max_duration_exceeded(elapsed, max_dur));
             }
@@ -180,9 +188,13 @@ where
     ///
     /// Returns success result
     fn handle_success(&self, value: T, attempt: u32, start_time: Instant) -> RetryResult<T> {
-        let success_event = SuccessEvent::new(value.clone(), attempt, start_time.elapsed());
+        let success_event = SuccessEvent::builder()
+            .result(value.clone())
+            .attempt_count(attempt)
+            .total_duration(start_time.elapsed())
+            .build();
         if let Some(listener) = self.builder.success_listener() {
-            listener(success_event);
+            listener.accept(&success_event);
         }
         Ok(value)
     }
@@ -204,9 +216,13 @@ where
         attempt: u32,
         start_time: Instant,
     ) -> RetryResult<T> {
-        let abort_event = AbortEvent::new(reason, attempt, start_time.elapsed());
+        let abort_event = AbortEvent::builder()
+            .reason(reason)
+            .attempt_count(attempt)
+            .total_duration(start_time.elapsed())
+            .build();
         if let Some(listener) = self.builder.abort_listener() {
-            listener(abort_event);
+            listener.accept(&abort_event);
         }
         Err(RetryError::aborted("Operation aborted"))
     }
@@ -245,16 +261,20 @@ where
         start_time: Instant,
     ) -> RetryError {
         let failure_event = match reason {
-            RetryReason::Error(error) => {
-                FailureEvent::new(Some(error), None, attempt, start_time.elapsed())
-            }
-            RetryReason::Result(result) => {
-                FailureEvent::new(None, Some(result), attempt, start_time.elapsed())
-            }
+            RetryReason::Error(error) => FailureEvent::builder()
+                .last_error(Some(error))
+                .attempt_count(attempt)
+                .total_duration(start_time.elapsed())
+                .build(),
+            RetryReason::Result(result) => FailureEvent::builder()
+                .last_result(Some(result))
+                .attempt_count(attempt)
+                .total_duration(start_time.elapsed())
+                .build(),
         };
 
         if let Some(listener) = self.builder.failure_listener() {
-            listener(failure_event);
+            listener.accept(&failure_event);
         }
 
         RetryError::max_attempts_exceeded(attempt, max_attempts)
@@ -297,22 +317,20 @@ where
         start_time: Instant,
     ) -> RetryEvent<T> {
         match reason {
-            RetryReason::Error(error) => RetryEvent::new(
-                attempt,
-                max_attempts,
-                Some(error),
-                None,
-                delay,
-                start_time.elapsed(),
-            ),
-            RetryReason::Result(result) => RetryEvent::new(
-                attempt,
-                max_attempts,
-                None,
-                Some(result),
-                delay,
-                start_time.elapsed(),
-            ),
+            RetryReason::Error(error) => RetryEvent::builder()
+                .attempt_count(attempt)
+                .max_attempts(max_attempts)
+                .last_error(Some(error))
+                .next_delay(delay)
+                .total_duration(start_time.elapsed())
+                .build(),
+            RetryReason::Result(result) => RetryEvent::builder()
+                .attempt_count(attempt)
+                .max_attempts(max_attempts)
+                .last_result(Some(result))
+                .next_delay(delay)
+                .total_duration(start_time.elapsed())
+                .build(),
         }
     }
 
@@ -324,7 +342,7 @@ where
     /// * `delay` - Delay duration
     fn trigger_retry_and_wait(&self, retry_event: RetryEvent<T>, delay: Duration) {
         if let Some(listener) = self.builder.retry_listener() {
-            listener(retry_event);
+            listener.accept(&retry_event);
         }
 
         if delay > Duration::ZERO {
@@ -340,7 +358,7 @@ where
     /// * `delay` - Delay duration
     async fn trigger_retry_and_wait_async(&self, retry_event: RetryEvent<T>, delay: Duration) {
         if let Some(listener) = self.builder.retry_listener() {
-            listener(retry_event);
+            listener.accept(&retry_event);
         }
 
         if delay > Duration::ZERO {
@@ -550,7 +568,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy};
+    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
     /// use std::time::Duration;
     ///
     /// let executor = RetryBuilder::new()
@@ -559,10 +577,15 @@ where
     ///     .set_operation_timeout(Some(Duration::from_secs(5))) // Single operation post-check timeout
     ///     .build();
     ///
-    /// let result = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    ///     // Operation that may fail
+    /// // 使用 RetryResult 简化函数签名，利用 From trait 自动转换错误
+    /// let result: RetryResult<String> = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ///     // 可以返回任何标准错误类型，会自动转换为 RetryError
+    ///     // 例如: std::fs::File::open("file.txt")?;
+    ///     // io::Error 会通过 From trait 自动转换为 RetryError
     ///     Ok("SUCCESS".to_string())
-    /// }).unwrap();
+    /// });
+    ///
+    /// assert!(result.is_ok());
     /// ```
     pub fn run<F>(&self, mut operation: F) -> RetryResult<T>
     where
@@ -624,7 +647,7 @@ where
     /// # Example
     ///
     /// ```rust,no_run
-    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy};
+    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
     /// use std::time::Duration;
     ///
     /// #[tokio::main]
@@ -638,11 +661,15 @@ where
     ///         })
     ///         .build();
     ///
-    ///     let result = executor.run_async(|| async {
-    ///         // Asynchronous operation
+    ///     // 使用 RetryResult 类型别名使代码更简洁
+    ///     let result: RetryResult<String> = executor.run_async(|| async {
+    ///         // 异步操作中也可以使用 ? 操作符，错误会自动转换
+    ///         // 例如: tokio::fs::read_to_string("file.txt").await?;
     ///         tokio::time::sleep(Duration::from_millis(100)).await;
     ///         Ok("SUCCESS".to_string())
-    ///     }).await.unwrap();
+    ///     }).await;
+    ///
+    ///     assert!(result.is_ok());
     /// }
     /// ```
     pub async fn run_async<F, Fut>(&self, mut operation: F) -> RetryResult<T>

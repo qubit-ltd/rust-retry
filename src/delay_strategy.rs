@@ -308,7 +308,10 @@ impl RetryDelayStrategy {
                 if initial_delay.is_zero() {
                     Err("Exponential backoff initial delay cannot be zero".to_string())
                 } else if *initial_delay >= *max_delay {
-                    Err("Exponential backoff initial delay must be less than maximum delay".to_string())
+                    Err(
+                        "Exponential backoff initial delay must be less than maximum delay"
+                            .to_string(),
+                    )
                 } else if *multiplier <= 1.0 {
                     Err("Exponential backoff multiplier must be greater than 1.0".to_string())
                 } else {
