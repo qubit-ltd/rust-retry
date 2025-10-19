@@ -20,6 +20,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use prism3_function::predicate::{BoxPredicate, Predicate};
+use prism3_function::readonly_consumer::ReadonlyConsumer;
 
 use super::event::{
     AbortEventListener, FailureEventListener, RetryEventListener, SuccessEventListener,
@@ -404,12 +405,13 @@ where
     ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxPredicate` from `prism3-function` for single ownership predicate evaluation.
-    pub fn failed_on_results_if<F>(mut self, condition: F) -> Self
+    /// Accepts any closure implementing `Fn(&T) -> bool`.
+    /// The closure is internally converted to `BoxPredicate` for storage.
+    pub fn failed_on_results_if<P>(mut self, condition: P) -> Self
     where
-        F: Fn(&T) -> bool + 'static,
+        P: Fn(&T) -> bool + 'static,
     {
-        self.failed_condition = Some(BoxPredicate::new(condition));
+        self.failed_condition = Some(condition.into_box());
         self
     }
 
@@ -487,12 +489,13 @@ where
     ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxPredicate` from `prism3-function` for single ownership predicate evaluation.
-    pub fn abort_on_results_if<F>(mut self, condition: F) -> Self
+    /// Accepts any closure implementing `Fn(&T) -> bool`.
+    /// The closure is internally converted to `BoxPredicate` for storage.
+    pub fn abort_on_results_if<P>(mut self, condition: P) -> Self
     where
-        F: Fn(&T) -> bool + 'static,
+        P: Fn(&T) -> bool + 'static,
     {
-        self.abort_condition = Some(BoxPredicate::new(condition));
+        self.abort_condition = Some(condition.into_box());
         self
     }
 
@@ -512,47 +515,128 @@ where
     /// - Send alert notifications
     /// - Execute custom retry logic
     ///
+    /// # Lifetime Requirements
+    ///
+    /// ⚠️ **Important**: The listener must be self-contained and not
+    /// depend on local variables from the calling scope. The listener will
+    /// be stored in the `RetryExecutor` and may be invoked long after the
+    /// builder is created.
+    ///
+    /// **Valid approaches**:
+    /// - Use closures that don't capture any variables
+    /// - Capture `'static` data (e.g., `static` variables)
+    /// - Capture `Arc`-wrapped data that can outlive the current scope
+    /// - Implement a struct with `ReadonlyConsumer` trait
+    ///
+    /// **Invalid approach** (won't compile):
+    /// ```rust,compile_fail
+    /// # use prism3_retry::RetryBuilder;
+    /// # use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    /// let local_var = Arc::new(AtomicBool::new(false));
+    /// let local_clone = local_var.clone();
+    /// let builder = RetryBuilder::<i32>::new().on_retry(move |_event| {
+    ///     local_clone.store(true, Ordering::SeqCst); // ❌ Won't compile
+    /// });
+    /// ```
+    ///
+    /// **Valid approach** (using struct):
+    /// ```rust
+    /// # use prism3_retry::RetryBuilder;
+    /// # use prism3_function::ReadonlyConsumer;
+    /// # use prism3_retry::RetryEvent;
+    /// # use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+    /// struct MyListener {
+    ///     counter: Arc<AtomicUsize>,
+    /// }
+    ///
+    /// impl ReadonlyConsumer<RetryEvent<i32>> for MyListener {
+    ///     fn accept(&self, _event: &RetryEvent<i32>) {
+    ///         self.counter.fetch_add(1, Ordering::SeqCst);
+    ///     }
+    /// }
+    ///
+    /// let counter = Arc::new(AtomicUsize::new(0));
+    /// let listener = MyListener { counter: counter.clone() };
+    /// let builder = RetryBuilder::<i32>::new().on_retry(listener);
+    /// ```
+    ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
-    pub fn on_retry<F>(mut self, listener: F) -> Self
+    /// Accepts any type implementing `ReadonlyConsumer<RetryEvent<T>>`
+    /// trait, including closures. Closures automatically implement
+    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    pub fn on_retry<L>(mut self, listener: L) -> Self
     where
-        F: Fn(&RetryEvent<T>) + Send + Sync + 'static,
+        L: ReadonlyConsumer<RetryEvent<T>> + 'static,
     {
-        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
-        self.on_retry = Some(BoxReadonlyConsumer::new(listener));
+        self.on_retry = Some(listener.into_box());
         self
     }
 
     /// Set success event listener
     ///
-    /// The success event listener is triggered when the operation completes successfully, whether it succeeds on the first attempt or after retries.
+    /// The success event listener is triggered when the operation completes
+    /// successfully, whether it succeeds on the first attempt or after
+    /// retries.
+    ///
+    /// # Lifetime Requirements
+    ///
+    /// ⚠️ **Important**: The listener must be self-contained and not
+    /// depend on local variables from the calling scope. The listener will
+    /// be stored in the `RetryExecutor` and may be invoked long after the
+    /// builder is created.
+    ///
+    /// **Valid approaches**:
+    /// - Use closures that don't capture any variables
+    /// - Capture `'static` data (e.g., `static` variables)
+    /// - Capture `Arc`-wrapped data that can outlive the current scope
+    /// - Implement a struct with `ReadonlyConsumer` trait
+    ///
+    /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
-    pub fn on_success<F>(mut self, listener: F) -> Self
+    /// Accepts any type implementing `ReadonlyConsumer<SuccessEvent<T>>`
+    /// trait, including closures. Closures automatically implement
+    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    pub fn on_success<L>(mut self, listener: L) -> Self
     where
-        F: Fn(&SuccessEvent<T>) + Send + Sync + 'static,
+        L: ReadonlyConsumer<SuccessEvent<T>> + 'static,
     {
-        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
-        self.on_success = Some(BoxReadonlyConsumer::new(listener));
+        self.on_success = Some(listener.into_box());
         self
     }
 
     /// Set failure event listener
     ///
-    /// The failure event listener is triggered when the operation ultimately fails, i.e., after all retry attempts have failed.
+    /// The failure event listener is triggered when the operation
+    /// ultimately fails, i.e., after all retry attempts have failed.
+    ///
+    /// # Lifetime Requirements
+    ///
+    /// ⚠️ **Important**: The listener must be self-contained and not
+    /// depend on local variables from the calling scope. The listener will
+    /// be stored in the `RetryExecutor` and may be invoked long after the
+    /// builder is created.
+    ///
+    /// **Valid approaches**:
+    /// - Use closures that don't capture any variables
+    /// - Capture `'static` data (e.g., `static` variables)
+    /// - Capture `Arc`-wrapped data that can outlive the current scope
+    /// - Implement a struct with `ReadonlyConsumer` trait
+    ///
+    /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
-    pub fn on_failure<F>(mut self, listener: F) -> Self
+    /// Accepts any type implementing `ReadonlyConsumer<FailureEvent<T>>`
+    /// trait, including closures. Closures automatically implement
+    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    pub fn on_failure<L>(mut self, listener: L) -> Self
     where
-        F: Fn(&FailureEvent<T>) + Send + Sync + 'static,
+        L: ReadonlyConsumer<FailureEvent<T>> + 'static,
     {
-        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
-        self.on_failure = Some(BoxReadonlyConsumer::new(listener));
+        self.on_failure = Some(listener.into_box());
         self
     }
 
@@ -561,19 +645,38 @@ where
     /// The abort event listener is triggered when the operation is aborted.
     ///
     /// **⚠️ Key: Abort Listener Trigger Conditions**
-    /// Whether the abort listener is triggered depends on **whether the result is also defined as "failed"**:
-    /// - **✅ Will trigger listener**: When the result matching abort condition **also matches failure condition**
-    /// - **❌ Will not trigger listener**: When the result matching abort condition **does not match any failure condition**
+    /// Whether the abort listener is triggered depends on **whether the
+    /// result is also defined as "failed"**:
+    /// - **✅ Will trigger listener**: When the result matching abort
+    ///   condition **also matches failure condition**
+    /// - **❌ Will not trigger listener**: When the result matching abort
+    ///   condition **does not match any failure condition**
+    ///
+    /// # Lifetime Requirements
+    ///
+    /// ⚠️ **Important**: The listener must be self-contained and not
+    /// depend on local variables from the calling scope. The listener will
+    /// be stored in the `RetryExecutor` and may be invoked long after the
+    /// builder is created.
+    ///
+    /// **Valid approaches**:
+    /// - Use closures that don't capture any variables
+    /// - Capture `'static` data (e.g., `static` variables)
+    /// - Capture `Arc`-wrapped data that can outlive the current scope
+    /// - Implement a struct with `ReadonlyConsumer` trait
+    ///
+    /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Internally uses `BoxReadonlyConsumer` from `prism3-function` to provide readonly event listening with single ownership.
-    pub fn on_abort<F>(mut self, listener: F) -> Self
+    /// Accepts any type implementing `ReadonlyConsumer<AbortEvent<T>>`
+    /// trait, including closures. Closures automatically implement
+    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    pub fn on_abort<L>(mut self, listener: L) -> Self
     where
-        F: Fn(&AbortEvent<T>) + Send + Sync + 'static,
+        L: ReadonlyConsumer<AbortEvent<T>> + 'static,
     {
-        use prism3_function::readonly_consumer::BoxReadonlyConsumer;
-        self.on_abort = Some(BoxReadonlyConsumer::new(listener));
+        self.on_abort = Some(listener.into_box());
         self
     }
 
