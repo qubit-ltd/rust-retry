@@ -305,7 +305,7 @@ fn test_operation_timeout_event_listening() {
         .set_max_attempts(3)
         .set_operation_timeout(Some(Duration::from_millis(100)))
         .set_fixed_delay_strategy(Duration::from_millis(50))
-        .on_retry(move |_event| {
+        .on_retry(move |_event: &prism3_retry::RetryEvent<String>| {
             let mut count = retry_count_clone.lock().unwrap();
             *count += 1;
         })
