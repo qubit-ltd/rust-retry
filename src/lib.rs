@@ -8,16 +8,21 @@
  ******************************************************************************/
 //! # Prism3 Retry - Retry module
 //!
-//! A fully-featured, type-safe retry management system, ported from Java's `ltd.qubit.commons.util.retry` package to Rust.
+//! A fully-featured, type-safe retry management system, ported from Java's
+//! `ltd.qubit.commons.util.retry` package to Rust.
 //!
 //! ## Design Philosophy
 //!
 //! ### Core Design Principles
 //!
-//! 1. **Type Safety First** - Leverage Rust's type system to ensure type safety at compile time
-//! 2. **Result Error Handling** - Use Rust's Result type for error handling instead of exceptions
-//! 3. **Zero-Cost Abstraction** - Use enums instead of trait objects to avoid dynamic dispatch overhead
-//! 4. **Unified Interface** - Provide generic APIs that support all primitive types and custom types
+//! 1. **Type Safety First** - Leverage Rust's type system to ensure type safety
+//!    at compile time
+//! 2. **Result Error Handling** - Use Rust's Result type for error handling
+//!    instead of exceptions
+//! 3. **Zero-Cost Abstraction** - Use enums instead of trait objects to avoid
+//!    dynamic dispatch overhead
+//! 4. **Unified Interface** - Provide generic APIs that support all primitive
+//!    types and custom types
 //! 5. **Event-Driven** - Support various event listeners during the retry process
 //!
 //! ## Module Structure
@@ -36,13 +41,19 @@
 //! ## Core Features
 //!
 //! - ✅ **Type-Safe Retry** - Use generic API to support any return type
-//! - ✅ **Multiple Delay Strategies** - Support fixed delay, random delay, exponential backoff
-//! - ✅ **Flexible Error Handling** - Result-based error handling with error type identification
+//! - ✅ **Multiple Delay Strategies** - Support fixed delay, random delay,
+//!   exponential backoff
+//! - ✅ **Flexible Error Handling** - Result-based error handling with error
+//!   type identification
 //! - ✅ **Result-Driven Retry** - Support retry logic based on return values
-//! - ✅ **Event Listening** - Support various event callbacks during retry process
-//! - ✅ **Configuration Integration** - Seamless integration with prism3-config's config module
-//! - ✅ **Timeout Control** - Support single operation timeout and overall timeout control
-//! - ✅ **Sync and Async** - Support both synchronous and asynchronous operation retries
+//! - ✅ **Event Listening** - Support various event callbacks during retry
+//!   process
+//! - ✅ **Configuration Integration** - Seamless integration with
+//!   prism3-config's config module
+//! - ✅ **Timeout Control** - Support single operation timeout and overall
+//!   timeout control
+//! - ✅ **Sync and Async** - Support both synchronous and asynchronous
+//!   operation retries
 //!
 //! ## Usage Examples
 //!
@@ -59,10 +70,11 @@
 //!     .on_retry(|event: &RetryEvent<String>| println!("Retry attempt {}", event.attempt_count()))
 //!     .build();
 //!
-//! // 使用 RetryResult 类型别名简化返回类型
+//! // Use RetryResult type alias to simplify return type
 //! let result: RetryResult<String> = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-//!     // 可以使用 ? 操作符，io::Error 会自动通过 From trait 转换为 RetryError
-//!     // 例如: std::fs::read_to_string("config.txt")?;
+//!     // Can use ? operator, io::Error will be automatically converted to
+//!     // RetryError through From trait
+//!     // Example: std::fs::read_to_string("config.txt")?;
 //!     Ok("SUCCESS".to_string())
 //! });
 //!
@@ -82,11 +94,11 @@
 //!     .set_max_duration(Some(Duration::from_secs(30)))      // Max 30 seconds total
 //!     .build();
 //!
-//! // 使用 RetryResult 简化异步函数的返回类型
+//! // Use RetryResult to simplify async function return type
 //! let result: RetryResult<String> = executor.run_async(|| async {
-//!     // 异步操作超时会被真正中断
-//!     // 可以使用 ? 操作符，错误会自动转换
-//!     // 例如: tokio::fs::read_to_string("config.txt").await?;
+//!     // Async operation timeout will be truly interrupted
+//!     // Can use ? operator, errors will be automatically converted
+//!     // Example: tokio::fs::read_to_string("config.txt").await?;
 //!     Ok("SUCCESS".to_string())
 //! }).await;
 //!
@@ -126,7 +138,8 @@ pub type RetryResult<T> = Result<T, RetryError>;
 
 /// Type alias for retry builder using default configuration
 ///
-/// This is the most commonly used `RetryBuilder` type, using `DefaultRetryConfig` as the configuration type.
+/// This is the most commonly used `RetryBuilder` type, using
+/// `DefaultRetryConfig` as the configuration type.
 ///
 /// # Example
 ///
@@ -141,7 +154,8 @@ pub type DefaultRetryBuilder<T> = RetryBuilder<T, DefaultRetryConfig>;
 
 /// Type alias for retry executor using default configuration
 ///
-/// This is the most commonly used `RetryExecutor` type, using `DefaultRetryConfig` as the configuration type.
+/// This is the most commonly used `RetryExecutor` type, using
+/// `DefaultRetryConfig` as the configuration type.
 ///
 /// # Example
 ///

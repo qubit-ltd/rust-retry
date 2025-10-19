@@ -26,21 +26,29 @@ use super::{
 
 /// Retry executor
 ///
-/// Responsible for executing operations with retry strategies. Automatically executes retry logic according to configured
-/// retry strategies, delay strategies, failure/abort conditions, and triggers event listeners at appropriate times.
+/// Responsible for executing operations with retry strategies. Automatically
+/// executes retry logic according to configured retry strategies, delay
+/// strategies, failure/abort conditions, and triggers event listeners at
+/// appropriate times.
 ///
 /// # Generic Parameters
 ///
 /// * `T` - The return value type of the operation
-/// * `C` - Retry configuration type, must implement `RetryConfig` trait, defaults to `DefaultRetryConfig`
+/// * `C` - Retry configuration type, must implement `RetryConfig` trait,
+///   defaults to `DefaultRetryConfig`
 ///
 /// # Core Features
 ///
-/// - **Synchronous Retry**: `run()` method executes synchronous operations, using post-check mechanism for timeout detection
-/// - **Asynchronous Retry**: `run_async()` method executes asynchronous operations, using tokio::time::timeout for real timeout interruption
-/// - **Timeout Control**: Supports single operation timeout (operation_timeout) and overall timeout (max_duration)
-/// - **Event Listening**: Supports event callbacks for retry, success, failure, abort, etc.
-/// - **Flexible Configuration**: Supports multiple delay strategies, error type identification, result value judgment, etc.
+/// - **Synchronous Retry**: `run()` method executes synchronous operations,
+///   using post-check mechanism for timeout detection
+/// - **Asynchronous Retry**: `run_async()` method executes asynchronous
+///   operations, using tokio::time::timeout for real timeout interruption
+/// - **Timeout Control**: Supports single operation timeout (operation_timeout)
+///   and overall timeout (max_duration)
+/// - **Event Listening**: Supports event callbacks for retry, success,
+///   failure, abort, etc.
+/// - **Flexible Configuration**: Supports multiple delay strategies, error
+///   type identification, result value judgment, etc.
 ///
 /// # Timeout Control
 ///
@@ -48,11 +56,14 @@ use super::{
 ///
 /// 1. **Single Operation Timeout (operation_timeout)**:
 ///    - Controls the maximum execution time for each operation
-///    - Synchronous version (`run`): Checks if timeout occurred after operation completes (post-check mechanism)
-///    - Asynchronous version (`run_async`): Uses tokio::time::timeout to truly interrupt timeout operations
+///    - Synchronous version (`run`): Checks if timeout occurred after
+///      operation completes (post-check mechanism)
+///    - Asynchronous version (`run_async`): Uses tokio::time::timeout to
+///      truly interrupt timeout operations
 ///
 /// 2. **Overall Timeout (max_duration)**:
-///    - Controls the maximum total time for the entire retry process (including all retries and delays)
+///    - Controls the maximum total time for the entire retry process
+///      (including all retries and delays)
 ///    - Applies to both synchronous and asynchronous versions
 ///
 /// # Usage Examples
@@ -68,10 +79,11 @@ use super::{
 ///     .set_operation_timeout(Some(Duration::from_secs(5)))
 ///     .build();
 ///
-/// // 使用 RetryResult 类型别名简化函数签名
+/// // Use RetryResult type alias to simplify function signature
 /// let result: RetryResult<String> = executor.run(|| {
-///     // 可以直接返回任何实现了 Into<RetryError> 的错误类型
-///     // 例如使用 ? 操作符处理 io::Error，会自动转换为 RetryError
+///     // Can directly return any error type that implements Into<RetryError>
+///     // For example, using ? operator to handle io::Error will automatically
+///     // convert to RetryError
 ///     std::thread::sleep(Duration::from_millis(100));
 ///     Ok("SUCCESS".to_string())
 /// });
@@ -89,7 +101,7 @@ use super::{
 ///     .set_operation_timeout(Some(Duration::from_secs(5)))
 ///     .build();
 ///
-/// // 使用 RetryResult 让异步函数签名更清晰
+/// // Use RetryResult to make async function signature clearer
 /// let result: RetryResult<String> = executor.run_async(|| async {
 ///     // Asynchronous operation, truly interrupted on timeout
 ///     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -546,20 +558,25 @@ where
 
     /// Execute synchronous operation (with post-check timeout mechanism)
     ///
-    /// Execute synchronous operation according to configured retry strategy, until success, maximum retry count reached, or abort condition met.
+    /// Execute synchronous operation according to configured retry strategy,
+    /// until success, maximum retry count reached, or abort condition met.
     ///
     /// # Timeout Control
     ///
     /// This method uses **post-check mechanism** for timeout control:
-    /// - After operation completes, check if execution time exceeds `operation_timeout`
-    /// - If timeout, convert result to `RetryError::OperationTimeout` error and trigger retry
+    /// - After operation completes, check if execution time exceeds
+    ///   `operation_timeout`
+    /// - If timeout, convert result to `RetryError::OperationTimeout` error
+    ///   and trigger retry
     /// - Note: Cannot truly interrupt ongoing synchronous operation
     ///
-    /// If you need to truly interrupt timeout operations, please use `run_async()` method.
+    /// If you need to truly interrupt timeout operations, please use
+    /// `run_async()` method.
     ///
     /// # Parameters
     ///
-    /// * `operation` - Operation to execute, returns `Result<T, Box<dyn Error + Send + Sync>>`
+    /// * `operation` - Operation to execute, returns
+    ///   `Result<T, Box<dyn Error + Send + Sync>>`
     ///
     /// # Returns
     ///
@@ -577,11 +594,14 @@ where
     ///     .set_operation_timeout(Some(Duration::from_secs(5))) // Single operation post-check timeout
     ///     .build();
     ///
-    /// // 使用 RetryResult 简化函数签名，利用 From trait 自动转换错误
+    /// // Use RetryResult to simplify function signature, leveraging From trait
+    /// // for automatic error conversion
     /// let result: RetryResult<String> = executor.run(|| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    ///     // 可以返回任何标准错误类型，会自动转换为 RetryError
-    ///     // 例如: std::fs::File::open("file.txt")?;
-    ///     // io::Error 会通过 From trait 自动转换为 RetryError
+    ///     // Can return any standard error type, will be automatically
+    ///     // converted to RetryError
+    ///     // Example: std::fs::File::open("file.txt")?;
+    ///     // io::Error will be automatically converted to RetryError through
+    ///     // From trait
     ///     Ok("SUCCESS".to_string())
     /// });
     ///
@@ -618,14 +638,18 @@ where
 
     /// Execute asynchronous operation (with real timeout interruption)
     ///
-    /// Execute asynchronous operation according to configured retry strategy, with single operation timeout control.
+    /// Execute asynchronous operation according to configured retry strategy,
+    /// with single operation timeout control.
     ///
     /// # Timeout Control
     ///
     /// This method uses **tokio::time::timeout** for real timeout interruption:
-    /// - When operation execution time exceeds `operation_timeout`, the operation will be truly interrupted (cancelled)
-    /// - After interruption, retry will be triggered (if there are remaining retry attempts)
-    /// - Compared to the `run()` method's post-check mechanism, this approach is more efficient and precise
+    /// - When operation execution time exceeds `operation_timeout`, the
+    ///   operation will be truly interrupted (cancelled)
+    /// - After interruption, retry will be triggered (if there are remaining
+    ///   retry attempts)
+    /// - Compared to the `run()` method's post-check mechanism, this approach
+    ///   is more efficient and precise
     ///
     /// # Difference from Synchronous Version
     ///
@@ -661,10 +685,11 @@ where
     ///         })
     ///         .build();
     ///
-    ///     // 使用 RetryResult 类型别名使代码更简洁
+    ///     // Use RetryResult type alias to make code more concise
     ///     let result: RetryResult<String> = executor.run_async(|| async {
-    ///         // 异步操作中也可以使用 ? 操作符，错误会自动转换
-    ///         // 例如: tokio::fs::read_to_string("file.txt").await?;
+    ///         // Can also use ? operator in async operations, errors will be
+    ///         // automatically converted
+    ///         // Example: tokio::fs::read_to_string("file.txt").await?;
     ///         tokio::time::sleep(Duration::from_millis(100)).await;
     ///         Ok("SUCCESS".to_string())
     ///     }).await;
