@@ -247,6 +247,7 @@ pub type AbortEventListener<T> = BoxReadonlyConsumer<AbortEvent<T>>;
 ///
 /// Haixing Hu
 #[derive(Debug)]
+#[allow(clippy::new_without_default)]
 pub struct AbortEventBuilder<T> {
     reason: Option<AbortReason<T>>,
     attempt_count: u32,
@@ -267,6 +268,7 @@ impl<T> AbortEventBuilder<T> {
     ///
     /// let builder = AbortEventBuilder::<i32>::new();
     /// ```
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             reason: None,
@@ -378,11 +380,5 @@ impl<T> AbortEventBuilder<T> {
             attempt_count: self.attempt_count,
             total_duration: self.total_duration,
         }
-    }
-}
-
-impl<T> Default for AbortEventBuilder<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }

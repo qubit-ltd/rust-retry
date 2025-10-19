@@ -258,6 +258,7 @@ pub type FailureEventListener<T> = BoxReadonlyConsumer<FailureEvent<T>>;
 ///
 /// Haixing Hu
 #[derive(Debug)]
+#[allow(clippy::new_without_default)]
 pub struct FailureEventBuilder<T> {
     last_error: Option<Box<dyn StdError + Send + Sync>>,
     last_result: Option<T>,
@@ -279,6 +280,7 @@ impl<T> FailureEventBuilder<T> {
     ///
     /// let builder = FailureEventBuilder::<i32>::new();
     /// ```
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             last_error: None,
@@ -410,11 +412,5 @@ impl<T> FailureEventBuilder<T> {
             attempt_count: self.attempt_count,
             total_duration: self.total_duration,
         }
-    }
-}
-
-impl<T> Default for FailureEventBuilder<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }

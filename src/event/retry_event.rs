@@ -354,6 +354,7 @@ pub type RetryEventListener<T> = BoxReadonlyConsumer<RetryEvent<T>>;
 ///
 /// Haixing Hu
 #[derive(Debug)]
+#[allow(clippy::new_without_default)]
 pub struct RetryEventBuilder<T> {
     attempt_count: u32,
     max_attempts: u32,
@@ -378,6 +379,7 @@ impl<T> RetryEventBuilder<T> {
     ///
     /// let builder = RetryEventBuilder::<i32>::new();
     /// ```
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             attempt_count: 0,
@@ -563,11 +565,5 @@ impl<T> RetryEventBuilder<T> {
             next_delay: self.next_delay,
             total_duration: self.total_duration,
         }
-    }
-}
-
-impl<T> Default for RetryEventBuilder<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }

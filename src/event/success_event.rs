@@ -222,6 +222,7 @@ pub type SuccessEventListener<T> = BoxReadonlyConsumer<SuccessEvent<T>>;
 ///
 /// Haixing Hu
 #[derive(Debug)]
+#[allow(clippy::new_without_default)]
 pub struct SuccessEventBuilder<T> {
     result: Option<T>,
     attempt_count: u32,
@@ -242,6 +243,7 @@ impl<T> SuccessEventBuilder<T> {
     ///
     /// let builder = SuccessEventBuilder::<i32>::new();
     /// ```
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             result: None,
@@ -351,11 +353,5 @@ impl<T> SuccessEventBuilder<T> {
             attempt_count: self.attempt_count,
             total_duration: self.total_duration,
         }
-    }
-}
-
-impl<T> Default for SuccessEventBuilder<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }
