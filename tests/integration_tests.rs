@@ -3,10 +3,15 @@
 //! Tests complete workflow of RetryBuilder and RetryExecutor.
 
 use std::error::Error;
+use std::fmt;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use prism3_retry::{RetryBuilder, RetryDelayStrategy, SimpleRetryConfig};
+use prism3_retry::{
+    AbortEvent, FailureEvent, RetryBuilder, RetryDelayStrategy, RetryEvent, SimpleRetryConfig,
+    SuccessEvent,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ApiResponse {
@@ -253,10 +258,10 @@ fn test_event_listeners() {
         .set_delay_strategy(RetryDelayStrategy::Fixed {
             delay: Duration::from_millis(10),
         })
-        .on_retry(move |_event| {
+        .on_retry(move |_event: &RetryEvent<ApiResponse>| {
             *retry_count_clone.lock().unwrap() += 1;
         })
-        .on_success(move |_event| {
+        .on_success(move |_event: &SuccessEvent<ApiResponse>| {
             *success_count_clone.lock().unwrap() += 1;
         })
         .build();
@@ -565,10 +570,10 @@ async fn test_async_event_listeners() {
         .set_delay_strategy(RetryDelayStrategy::Fixed {
             delay: Duration::from_millis(10),
         })
-        .on_retry(move |_event| {
+        .on_retry(move |_event: &RetryEvent<ApiResponse>| {
             *retry_count_clone.lock().unwrap() += 1;
         })
-        .on_success(move |_event| {
+        .on_success(move |_event: &SuccessEvent<ApiResponse>| {
             *success_count_clone.lock().unwrap() += 1;
         })
         .build();
@@ -730,7 +735,7 @@ fn test_failure_event_listener() {
     let executor = RetryBuilder::<ApiResponse>::new()
         .set_max_attempts(2)
         .set_delay_strategy(RetryDelayStrategy::None)
-        .on_failure(move |_event| {
+        .on_failure(move |_event: &FailureEvent<ApiResponse>| {
             *failure_count_clone.lock().unwrap() += 1;
         })
         .build();
@@ -759,7 +764,7 @@ fn test_failure_listener_on_max_duration_exceeded() {
         .set_delay_strategy(RetryDelayStrategy::Fixed {
             delay: Duration::from_millis(20),
         })
-        .on_failure(move |event| {
+        .on_failure(move |event: &FailureEvent<ApiResponse>| {
             *failure_count_clone.lock().unwrap() += 1;
             // Verify the event has correct information
             assert!(event.last_error().is_none());
@@ -804,7 +809,7 @@ fn test_failure_listener_on_max_attempts_with_result() {
         .set_max_attempts(3)
         .set_delay_strategy(RetryDelayStrategy::None)
         .failed_on_results_if(|r| r.status >= 500)
-        .on_failure(move |event| {
+        .on_failure(move |event: &FailureEvent<ApiResponse>| {
             *failure_count_clone.lock().unwrap() += 1;
             // When max attempts exceeded with result, last_result should be Some
             assert!(event.last_result().is_some());
@@ -843,7 +848,7 @@ fn test_success_listener_triggered() {
     let executor = RetryBuilder::<ApiResponse>::new()
         .set_max_attempts(5)
         .set_delay_strategy(RetryDelayStrategy::None)
-        .on_success(move |event| {
+        .on_success(move |event: &SuccessEvent<ApiResponse>| {
             *success_count_clone.lock().unwrap() += 1;
             // Verify success event has the correct value
             assert_eq!(event.result().status, 200);
@@ -882,7 +887,7 @@ async fn test_async_success_listener_triggered() {
     let executor = RetryBuilder::<ApiResponse>::new()
         .set_max_attempts(3)
         .set_delay_strategy(RetryDelayStrategy::None)
-        .on_success(move |event| {
+        .on_success(move |event: &SuccessEvent<ApiResponse>| {
             *success_count_clone.lock().unwrap() += 1;
             assert_eq!(event.result().status, 200);
         })
@@ -903,15 +908,15 @@ async fn test_async_success_listener_triggered() {
 
 #[test]
 fn test_abort_event_listener() {
-    let abort_count = Arc::new(Mutex::new(0));
-    let abort_count_clone = abort_count.clone();
+    static ABORT_COUNT: AtomicUsize = AtomicUsize::new(0);
+    ABORT_COUNT.store(0, Ordering::SeqCst); // Reset counter
 
     let executor = RetryBuilder::<ApiResponse>::new()
         .set_max_attempts(5)
         .set_delay_strategy(RetryDelayStrategy::None)
         .abort_on_results_if(|r| r.status == 401)
-        .on_abort(move |_event| {
-            *abort_count_clone.lock().unwrap() += 1;
+        .on_abort(|_event: &AbortEvent<ApiResponse>| {
+            ABORT_COUNT.fetch_add(1, Ordering::SeqCst);
         })
         .build();
 
@@ -924,7 +929,100 @@ fn test_abort_event_listener() {
 
     assert!(result.is_err());
     // Abort event should be triggered once
-    assert_eq!(*abort_count.lock().unwrap(), 1);
+    assert_eq!(ABORT_COUNT.load(Ordering::SeqCst), 1);
+}
+
+// ==================== Type Inference Experiment ====================
+//
+// This section demonstrates an important Rust type inference limitation:
+//
+// **Hypothesis**: If a closure parameter is used in the closure body (e.g., calling
+// a function that requires a specific type), the compiler should be able to infer
+// the parameter's type without explicit annotation.
+//
+// **Experiment Result**: HYPOTHESIS REJECTED ❌
+//
+// Even when the closure parameter is actively used (calling methods, passing to
+// functions with specific type requirements), the compiler STILL cannot infer
+// the generic lifetime required by the `ReadonlyConsumer` trait.
+//
+// **Root Cause**: The issue is not about type inference of the concrete type
+// (AbortEvent<ApiResponse>), but about inferring the **generic lifetime**.
+//
+// The `ReadonlyConsumer` trait requires: `for<'a> Fn(&'a Event<T>)`
+// Without explicit annotation, compiler infers: `Fn(&'specific Event<T>)`
+//
+// **Conclusion**: Explicit type annotation on closure parameters is ALWAYS
+// required when the closure needs to satisfy a trait with generic lifetime
+// requirements (HRTB - Higher-Rank Trait Bounds), regardless of how the
+// parameter is used in the closure body.
+//
+// See tests below for concrete examples.
+
+/// Helper function that accepts a specific event type
+/// Used to test if calling such a function helps type inference
+fn process_abort_event(event: &AbortEvent<ApiResponse>) {
+    // Just access some field to make it type-specific
+    let _ = event.attempt_count();
+}
+
+#[test]
+fn test_abort_event_listener_type_inference_without_annotation() {
+    // Experiment: Try to let compiler infer the type by using the parameter
+    // Result: FAILS - even with usage, compiler cannot infer generic lifetime
+    static ABORT_COUNT: AtomicUsize = AtomicUsize::new(0);
+    ABORT_COUNT.store(0, Ordering::SeqCst); // Reset counter
+
+    let executor = RetryBuilder::<ApiResponse>::new()
+        .set_max_attempts(5)
+        .set_delay_strategy(RetryDelayStrategy::None)
+        .abort_on_results_if(|r| r.status == 401)
+        .on_abort(|event: &AbortEvent<ApiResponse>| {
+            // Even though we call a function that requires specific type,
+            // we still need explicit type annotation on the closure parameter
+            process_abort_event(event);
+            ABORT_COUNT.fetch_add(1, Ordering::SeqCst);
+        })
+        .build();
+
+    let result = executor.run(|| {
+        Ok(ApiResponse {
+            status: 401,
+            message: "Unauthorized".to_string(),
+        })
+    });
+
+    assert!(result.is_err());
+    assert_eq!(ABORT_COUNT.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn test_abort_event_listener_direct_field_access() {
+    // Experiment: Try accessing event fields directly without helper function
+    // Result: FAILS - same issue, compiler cannot infer generic lifetime
+    static ABORT_COUNT: AtomicUsize = AtomicUsize::new(0);
+    ABORT_COUNT.store(0, Ordering::SeqCst); // Reset counter
+
+    let executor = RetryBuilder::<ApiResponse>::new()
+        .set_max_attempts(5)
+        .set_delay_strategy(RetryDelayStrategy::None)
+        .abort_on_results_if(|r| r.status == 401)
+        .on_abort(|event: &AbortEvent<ApiResponse>| {
+            // Access event fields directly
+            let _count = event.attempt_count();
+            ABORT_COUNT.fetch_add(1, Ordering::SeqCst);
+        })
+        .build();
+
+    let result = executor.run(|| {
+        Ok(ApiResponse {
+            status: 401,
+            message: "Unauthorized".to_string(),
+        })
+    });
+
+    assert!(result.is_err());
+    assert_eq!(ABORT_COUNT.load(Ordering::SeqCst), 1);
 }
 
 // ==================== Performance and stress tests ====================
@@ -1147,8 +1245,6 @@ fn test_abort_result_with_condition_matching() {
 
 #[test]
 fn test_error_with_specific_retry_type_still_retries_others() {
-    use std::fmt;
-
     #[derive(Debug)]
     struct CustomError;
 
