@@ -1,3 +1,11 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # Retry Integration Tests
 //!
 //! Tests complete workflow of RetryBuilder and RetryExecutor.
@@ -8,7 +16,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use prism3_retry::{
+use qubit_retry::{
     AbortEvent, FailureEvent, RetryBuilder, RetryDelayStrategy, RetryEvent, SimpleRetryConfig,
     SuccessEvent,
 };
@@ -751,7 +759,7 @@ fn test_failure_event_listener() {
 /// Test failure listener is triggered when max duration is exceeded
 #[test]
 fn test_failure_listener_on_max_duration_exceeded() {
-    use prism3_retry::RetryError;
+    use qubit_retry::RetryError;
 
     let failure_count = Arc::new(Mutex::new(0));
     let failure_count_clone = failure_count.clone();
@@ -944,12 +952,12 @@ fn test_abort_event_listener() {
 //
 // Even when the closure parameter is actively used (calling methods, passing to
 // functions with specific type requirements), the compiler STILL cannot infer
-// the generic lifetime required by the `ReadonlyConsumer` trait.
+// the generic lifetime required by the `Consumer` trait.
 //
 // **Root Cause**: The issue is not about type inference of the concrete type
 // (AbortEvent<ApiResponse>), but about inferring the **generic lifetime**.
 //
-// The `ReadonlyConsumer` trait requires: `for<'a> Fn(&'a Event<T>)`
+// The `Consumer` trait requires: `for<'a> Fn(&'a Event<T>)`
 // Without explicit annotation, compiler infers: `Fn(&'specific Event<T>)`
 //
 // **Conclusion**: Explicit type annotation on closure parameters is ALWAYS
@@ -1839,7 +1847,7 @@ async fn test_async_should_abort_result_with_condition_true() {
 /// by using abort_on_all_errors() which inserts dyn Error TypeId
 #[test]
 fn test_should_abort_error_with_abort_all_errors() {
-    use prism3_retry::RetryError;
+    use qubit_retry::RetryError;
 
     let attempt_count = Arc::new(Mutex::new(0));
     let attempt_count_clone = attempt_count.clone();
@@ -1877,7 +1885,7 @@ fn test_should_abort_error_with_abort_all_errors() {
 /// Test abort_on_all_errors with different error types
 #[test]
 fn test_abort_on_all_errors_with_io_error() {
-    use prism3_retry::RetryError;
+    use qubit_retry::RetryError;
 
     let attempt_count = Arc::new(Mutex::new(0));
     let attempt_count_clone = attempt_count.clone();

@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -10,7 +10,7 @@
 //!
 //! Tests for the SuccessEvent struct and builder.
 
-use prism3_retry::event::SuccessEvent;
+use qubit_retry::event::SuccessEvent;
 use std::time::Duration;
 
 /// Test SuccessEvent creation and field access

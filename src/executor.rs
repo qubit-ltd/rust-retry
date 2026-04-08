@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -17,7 +17,7 @@
 use std::error::Error;
 use std::time::{Duration, Instant};
 
-use prism3_function::readonly_consumer::ReadonlyConsumer;
+use qubit_function::Consumer;
 
 use super::{
     AbortEvent, DefaultRetryConfig, FailureEvent, RetryBuilder, RetryConfig, RetryDecision,
@@ -71,7 +71,7 @@ use super::{
 /// ## Synchronous Retry (Post-Check Timeout)
 ///
 /// ```rust
-/// use prism3_retry::{RetryBuilder, RetryResult};
+/// use qubit_retry::{RetryBuilder, RetryResult};
 /// use std::time::Duration;
 ///
 /// let executor = RetryBuilder::<String>::new()
@@ -92,7 +92,7 @@ use super::{
 /// ## Asynchronous Retry (Real Timeout Interruption)
 ///
 /// ```rust,no_run
-/// use prism3_retry::{RetryBuilder, RetryResult};
+/// use qubit_retry::{RetryBuilder, RetryResult};
 /// use std::time::Duration;
 ///
 /// # async fn example() {
@@ -585,7 +585,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
+    /// use qubit_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
     /// use std::time::Duration;
     ///
     /// let executor = RetryBuilder::new()
@@ -671,7 +671,7 @@ where
     /// # Example
     ///
     /// ```rust,no_run
-    /// use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
+    /// use qubit_retry::{RetryBuilder, RetryDelayStrategy, RetryResult};
     /// use std::time::Duration;
     ///
     /// #[tokio::main]

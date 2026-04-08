@@ -33,8 +33,8 @@ Enable coverage reporting service:
 Add to your project's `README.md`:
 
 ```markdown
-[![CircleCI](https://circleci.com/gh/<org>/<repo>.svg?style=svg)](https://circleci.com/gh/<org>/<repo>)
-[![Coverage Status](https://coveralls.io/repos/github/<org>/<repo>/badge.svg?branch=main)](https://coveralls.io/github/<org>/<repo>?branch=main)
+[![CircleCI](https://circleci.com/gh/qubit-ltd/rust-retry.svg?style=svg)](https://circleci.com/gh/qubit-ltd/rust-retry)
+[![Coverage Status](https://coveralls.io/repos/github/qubit-ltd/rust-retry/badge.svg?branch=main)](https://coveralls.io/github/qubit-ltd/rust-retry?branch=main)
 ```
 
 ### 4. Local Testing (3 minutes)
@@ -80,7 +80,7 @@ cargo test             # Run tests
 
 ### View Build Status
 
-- Online: https://app.circleci.com/pipelines/github/<org>/<repo>
+- Online: https://app.circleci.com/pipelines/github/qubit-ltd/rust-retry
 - PR page shows check status
 - Email notifications (if configured)
 
@@ -162,8 +162,8 @@ git commit -m "docs: update README [ci skip]"
 ## 🔗 Important Links
 
 - 📖 [Full Documentation](README.md)
-- 🏠 [CircleCI Dashboard](https://app.circleci.com/pipelines/github/<org>/<repo>)
-- 📚 [Project Documentation](https://github.com/<org>/<repo>)
+- 🏠 [CircleCI Dashboard](https://app.circleci.com/pipelines/github/qubit-ltd/rust-retry)
+- 📚 [Project Documentation](https://github.com/qubit-ltd/rust-retry)
 
 ## 💡 Best Practices
 
@@ -176,8 +176,8 @@ git commit -m "docs: update README [ci skip]"
 ## 🆘 Need Help?
 
 - 📧 starfish.hu@gmail.com
-- 🐛 [Submit Issue](https://github.com/<org>/<repo>/issues)
-- 💬 [Discussion Forum](https://github.com/<org>/<repo>/discussions)
+- 🐛 [Submit Issue](https://github.com/qubit-ltd/rust-retry/issues)
+- 💬 [Discussion Forum](https://github.com/qubit-ltd/rust-retry/discussions)
 
 ---
 

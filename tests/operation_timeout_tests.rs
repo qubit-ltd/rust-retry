@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -14,7 +14,7 @@
 //!
 //! Haixing Hu
 
-use prism3_retry::{RetryBuilder, RetryError};
+use qubit_retry::{RetryBuilder, RetryError};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -275,8 +275,8 @@ async fn test_async_max_duration_vs_operation_timeout() {
 #[test]
 fn test_operation_timeout_config_from_file() {
     // Test loading operation_timeout from config file
-    use prism3_config::Config;
-    use prism3_retry::DefaultRetryConfig;
+    use qubit_config::Config;
+    use qubit_retry::DefaultRetryConfig;
 
     let mut config = Config::new();
     config.set("retry.max_attempts", 3u32).unwrap();
@@ -305,7 +305,7 @@ fn test_operation_timeout_event_listening() {
         .set_max_attempts(3)
         .set_operation_timeout(Some(Duration::from_millis(100)))
         .set_fixed_delay_strategy(Duration::from_millis(50))
-        .on_retry(move |_event: &prism3_retry::RetryEvent<String>| {
+        .on_retry(move |_event: &qubit_retry::RetryEvent<String>| {
             let mut count = retry_count_clone.lock().unwrap();
             *count += 1;
         })

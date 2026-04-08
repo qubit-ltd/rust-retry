@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -18,7 +18,7 @@
 use std::error::Error as StdError;
 use std::time::Duration;
 
-use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+use qubit_function::BoxConsumer;
 
 /// Retry event
 ///
@@ -48,7 +48,7 @@ use prism3_function::readonly_consumer::BoxReadonlyConsumer;
 /// interface for creating retry events with named parameters:
 ///
 /// ```rust
-/// use prism3_retry::event::retry_event::RetryEvent;
+/// use qubit_retry::event::retry_event::RetryEvent;
 /// use std::time::Duration;
 ///
 /// let event = RetryEvent::<String>::builder()
@@ -89,7 +89,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<i32>::builder()
@@ -113,7 +113,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<i32>::builder()
@@ -137,7 +137,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<i32>::builder()
@@ -162,7 +162,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     /// use std::io::{Error, ErrorKind};
     ///
@@ -190,7 +190,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<String>::builder()
@@ -218,7 +218,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let delay = Duration::from_secs(2);
@@ -244,7 +244,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let total = Duration::from_millis(500);
@@ -270,7 +270,7 @@ impl<T> RetryEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<i32>::builder()
@@ -299,7 +299,7 @@ impl<T> RetryEvent<T> {
 /// Callback function type for listening to retry events, called when
 /// an operation fails and is preparing to retry.
 ///
-/// Uses `BoxReadonlyConsumer` from `prism3-function` to provide
+/// Uses `BoxConsumer` from `qubit-function` to provide
 /// readonly event consumption with single ownership.
 ///
 /// # Generic Parameters
@@ -309,14 +309,14 @@ impl<T> RetryEvent<T> {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::retry_event::{
+/// use qubit_retry::event::retry_event::{
 ///     RetryEvent,
 ///     RetryEventListener
 /// };
-/// use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+/// use qubit_function::BoxConsumer;
 ///
 /// let listener: RetryEventListener<i32> =
-///     BoxReadonlyConsumer::new(|event: &RetryEvent<i32>| {
+///     BoxConsumer::new(|event: &RetryEvent<i32>| {
 ///         println!(
 ///             "Retry attempt {}, delay {:?}",
 ///             event.attempt_count(),
@@ -324,7 +324,7 @@ impl<T> RetryEvent<T> {
 ///         );
 ///     });
 /// ```
-pub type RetryEventListener<T> = BoxReadonlyConsumer<RetryEvent<T>>;
+pub type RetryEventListener<T> = BoxConsumer<RetryEvent<T>>;
 
 /// Builder for constructing `RetryEvent`
 ///
@@ -339,7 +339,7 @@ pub type RetryEventListener<T> = BoxReadonlyConsumer<RetryEvent<T>>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::retry_event::RetryEvent;
+/// use qubit_retry::event::retry_event::RetryEvent;
 /// use std::time::Duration;
 ///
 /// let event = RetryEvent::<i32>::builder()
@@ -375,7 +375,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEventBuilder;
+    /// use qubit_retry::event::retry_event::RetryEventBuilder;
     ///
     /// let builder = RetryEventBuilder::<i32>::new();
     /// ```
@@ -404,7 +404,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     ///
     /// let builder = RetryEvent::<i32>::builder()
     ///     .attempt_count(3);
@@ -427,7 +427,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     ///
     /// let builder = RetryEvent::<i32>::builder()
     ///     .max_attempts(5);
@@ -450,7 +450,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::io::{Error, ErrorKind};
     ///
     /// let error = Error::new(ErrorKind::TimedOut, "Timeout");
@@ -475,7 +475,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     ///
     /// let builder = RetryEvent::builder()
     ///     .last_result(Some(String::from("empty")));
@@ -498,7 +498,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let builder = RetryEvent::<i32>::builder()
@@ -523,7 +523,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let builder = RetryEvent::<i32>::builder()
@@ -546,7 +546,7 @@ impl<T> RetryEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::retry_event::RetryEvent;
+    /// use qubit_retry::event::retry_event::RetryEvent;
     /// use std::time::Duration;
     ///
     /// let event = RetryEvent::<i32>::builder()

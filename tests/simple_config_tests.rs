@@ -1,8 +1,16 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # SimpleRetryConfig Integration Tests
 //!
 //! Tests public API functionality of SimpleRetryConfig.
 
-use prism3_retry::{RetryConfig, RetryDelayStrategy, SimpleRetryConfig};
+use qubit_retry::{RetryConfig, RetryDelayStrategy, SimpleRetryConfig};
 use std::time::Duration;
 
 // === Basic config tests ===

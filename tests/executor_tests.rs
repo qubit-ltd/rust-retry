@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -14,7 +14,7 @@
 //!
 //! 胡海星
 
-use prism3_retry::{
+use qubit_retry::{
     AbortEvent, FailureEvent, RetryBuilder, RetryDelayStrategy, RetryError, RetryEvent,
     SuccessEvent,
 };

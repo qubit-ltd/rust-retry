@@ -1,12 +1,12 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
  ******************************************************************************/
-//! # Prism3 Retry - Retry module
+//! # Qubit Retry - Retry module
 //!
 //! A fully-featured, type-safe retry management system, ported from Java's
 //! `ltd.qubit.commons.util.retry` package to Rust.
@@ -49,7 +49,7 @@
 //! - ✅ **Event Listening** - Support various event callbacks during retry
 //!   process
 //! - ✅ **Configuration Integration** - Seamless integration with
-//!   prism3-config's config module
+//!   qubit-config's config module
 //! - ✅ **Timeout Control** - Support single operation timeout and overall
 //!   timeout control
 //! - ✅ **Sync and Async** - Support both synchronous and asynchronous
@@ -59,7 +59,7 @@
 //!
 //! ### Basic Synchronous Retry
 //! ```rust
-//! use prism3_retry::{RetryBuilder, RetryDelayStrategy, RetryResult, RetryEvent};
+//! use qubit_retry::{RetryBuilder, RetryDelayStrategy, RetryResult, RetryEvent};
 //! use std::time::Duration;
 //!
 //! // Basic retry configuration
@@ -83,7 +83,7 @@
 //!
 //! ### Async Retry with Timeout Control
 //! ```rust,no_run
-//! use prism3_retry::{RetryBuilder, RetryResult};
+//! use qubit_retry::{RetryBuilder, RetryResult};
 //! use std::time::Duration;
 //!
 //! # async fn example() {
@@ -144,7 +144,7 @@ pub type RetryResult<T> = Result<T, RetryError>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::DefaultRetryBuilder;
+/// use qubit_retry::DefaultRetryBuilder;
 ///
 /// let builder = DefaultRetryBuilder::<String>::new()
 ///     .set_max_attempts(3)
@@ -160,7 +160,7 @@ pub type DefaultRetryBuilder<T> = RetryBuilder<T, DefaultRetryConfig>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::{RetryBuilder, DefaultRetryExecutor};
+/// use qubit_retry::{RetryBuilder, DefaultRetryExecutor};
 ///
 /// let executor: DefaultRetryExecutor<String> = RetryBuilder::new()
 ///     .set_max_attempts(3)

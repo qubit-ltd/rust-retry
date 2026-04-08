@@ -1,8 +1,8 @@
-# Prism3 Retry
+# Qubit Retry
 
-[![CircleCI](https://circleci.com/gh/3-prism/prism3-rust-retry.svg?style=shield)](https://circleci.com/gh/3-prism/prism3-rust-retry)
-[![Coverage Status](https://coveralls.io/repos/github/3-prism/prism3-rust-retry/badge.svg?branch=main)](https://coveralls.io/github/3-prism/prism3-rust-retry?branch=main)
-[![Crates.io](https://img.shields.io/crates/v/prism3-retry.svg?color=blue)](https://crates.io/crates/prism3-retry)
+[![CircleCI](https://circleci.com/gh/qubit-ltd/rust-retry.svg?style=shield)](https://circleci.com/gh/qubit-ltd/rust-retry)
+[![Coverage Status](https://coveralls.io/repos/github/qubit-ltd/rust-retry/badge.svg?branch=main)](https://coveralls.io/github/qubit-ltd/rust-retry?branch=main)
+[![Crates.io](https://img.shields.io/crates/v/qubit-retry.svg?color=blue)](https://crates.io/crates/qubit-retry)
 [![Rust](https://img.shields.io/badge/rust-1.70+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![中文文档](https://img.shields.io/badge/文档-中文版-blue.svg)](README.zh_CN.md)
@@ -13,7 +13,7 @@ A feature-complete, type-safe retry management system for Rust. This module prov
 
 ## Overview
 
-Prism3 Retry is designed to handle transient failures in distributed systems and unreliable operations. It offers a comprehensive retry framework with support for various backoff strategies, conditional retry logic, and detailed event monitoring.
+Qubit Retry is designed to handle transient failures in distributed systems and unreliable operations. It offers a comprehensive retry framework with support for various backoff strategies, conditional retry logic, and detailed event monitoring.
 
 ## Features
 
@@ -22,7 +22,7 @@ Prism3 Retry is designed to handle transient failures in distributed systems and
 - ✅ **Flexible Error Handling** - Result-based error handling with error type recognition
 - ✅ **Result-Driven Retry** - Support for retry logic based on return values
 - ✅ **Event Listeners** - Comprehensive event callbacks throughout the retry process
-- ✅ **Configuration Integration** - Seamless integration with prism3-config module
+- ✅ **Configuration Integration** - Seamless integration with qubit-config module
 - ✅ **Timeout Control** - Support for both operation-level and overall timeout
 - ✅ **Sync & Async** - Support for both synchronous and asynchronous operations
 - ✅ **Zero-Cost Generics** - Custom configuration types with compile-time optimization
@@ -62,7 +62,7 @@ graph TB
     C --> D[DefaultRetryConfig]
     C --> E[SimpleRetryConfig]
     C --> F[Custom Config...]
-    D --> G[prism3_config::Config]
+    D --> G[qubit_config::Config]
 
     B --> H[RetryDelayStrategy]
     B --> I[Event Listeners]
@@ -87,7 +87,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-prism3-retry = "0.1.0"
+qubit-retry = "0.1.2"
 ```
 
 ## Quick Start
@@ -95,7 +95,7 @@ prism3-retry = "0.1.0"
 ### Scenario 1: Default Usage (Most Common, 90% of Cases)
 
 ```rust
-use prism3_retry::RetryBuilder;
+use qubit_retry::RetryBuilder;
 use std::time::Duration;
 
 // Using default config - generic parameter automatically inferred as DefaultRetryConfig
@@ -113,7 +113,7 @@ let result = executor.run(|| {
 ### Scenario 2: Using Type Aliases (Recommended)
 
 ```rust
-use prism3_retry::{DefaultRetryBuilder, DefaultRetryExecutor};
+use qubit_retry::{DefaultRetryBuilder, DefaultRetryExecutor};
 
 // More explicit types
 let builder: DefaultRetryBuilder<String> = RetryBuilder::new();
@@ -125,7 +125,7 @@ let executor: DefaultRetryExecutor<String> = builder.build();
 When you need to load configuration from different sources:
 
 ```rust
-use prism3_retry::{RetryBuilder, RetryConfig, RetryDelayStrategy};
+use qubit_retry::{RetryBuilder, RetryConfig, RetryDelayStrategy};
 use std::time::Duration;
 
 // 1. Implement custom configuration type
@@ -196,7 +196,7 @@ let executor = RetryBuilder::with_config(file_config)
 Example of dynamically loading configuration from Redis:
 
 ```rust
-use prism3_retry::{RetryBuilder, RetryConfig, RetryDelayStrategy};
+use qubit_retry::{RetryBuilder, RetryConfig, RetryDelayStrategy};
 
 struct RedisRetryConfig {
     client: redis::Client,
@@ -243,7 +243,7 @@ let executor = RetryBuilder::with_config(redis_config)
 
 #### 1. Simple Retry
 ```rust
-use prism3_retry::{RetryBuilder, RetryResult};
+use qubit_retry::{RetryBuilder, RetryResult};
 use std::time::Duration;
 
 // Create retry executor
@@ -273,7 +273,7 @@ match result {
 
 #### 2. Result-Based Retry
 ```rust
-use prism3_retry::RetryResult;
+use qubit_retry::RetryResult;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ApiResponse {
@@ -349,7 +349,7 @@ let executor = RetryBuilder::<String>::new()
 
 #### 1. Custom Delay Strategy
 ```rust
-use prism3_retry::RetryDelayStrategy;
+use qubit_retry::RetryDelayStrategy;
 
 // Exponential backoff strategy
 let strategy = RetryDelayStrategy::ExponentialBackoff {
@@ -430,8 +430,8 @@ let executor = RetryBuilder::<String>::new()
 
 ##### Using DefaultRetryConfig (Config System Based)
 ```rust
-use prism3_config::Config;
-use prism3_retry::{RetryBuilder, DefaultRetryConfig};
+use qubit_config::Config;
+use qubit_retry::{RetryBuilder, DefaultRetryConfig};
 
 // Load retry configuration from config file
 let mut config = Config::new();
@@ -449,7 +449,7 @@ let executor = RetryBuilder::with_config(retry_config).build();
 
 ##### Using SimpleRetryConfig (Simple In-Memory Configuration)
 ```rust
-use prism3_retry::{RetryBuilder, SimpleRetryConfig, RetryDelayStrategy};
+use qubit_retry::{RetryBuilder, SimpleRetryConfig, RetryDelayStrategy};
 use std::time::Duration;
 
 let mut simple_config = SimpleRetryConfig::new();
@@ -708,7 +708,7 @@ let executor = RetryBuilder::new()
 ### 2. Use Type Aliases to Simplify Code
 
 ```rust
-use prism3_retry::DefaultRetryExecutor;
+use qubit_retry::DefaultRetryExecutor;
 
 fn create_executor() -> DefaultRetryExecutor<String> {
     RetryBuilder::new()
@@ -720,7 +720,7 @@ fn create_executor() -> DefaultRetryExecutor<String> {
 ### 3. Explicit Types for Custom Configuration
 
 ```rust
-use prism3_retry::{RetryBuilder, RetryExecutor};
+use qubit_retry::{RetryBuilder, RetryExecutor};
 
 struct MyConfig { /* ... */ }
 impl RetryConfig for MyConfig { /* ... */ }
@@ -734,7 +734,7 @@ fn create_custom_executor(config: MyConfig) -> RetryExecutor<String, MyConfig> {
 
 ### 4. Error Handling
 ```rust
-use prism3_retry::{RetryResult, RetryError};
+use qubit_retry::{RetryResult, RetryError};
 
 // Good practice: explicitly handle various error types
 let result: RetryResult<String> = executor.run(|| {
@@ -831,7 +831,7 @@ The module includes a comprehensive test suite:
 
 Run tests:
 ```bash
-cargo test -p prism3-retry
+cargo test -p qubit-retry
 ```
 
 ## Frequently Asked Questions
@@ -876,7 +876,7 @@ A: Choose based on your requirements:
 
 **Use `DefaultRetryConfig` when:**
 - Need configuration file support
-- Want to integrate with prism3-config system
+- Want to integrate with qubit-config system
 - Require dynamic configuration loading
 - Need configuration persistence
 
@@ -927,8 +927,8 @@ The retry module provides the following key advantages:
 
 ## Dependencies
 
-- **prism3-core**: Core utilities
-- **prism3-config**: Configuration management
+- **qubit-function**: Functional types (predicates, consumers)
+- **qubit-config**: Configuration management (for `DefaultRetryConfig`)
 - **serde**: Serialization framework
 - **thiserror**: Error handling
 - **tracing**: Logging support
@@ -938,7 +938,7 @@ The retry module provides the following key advantages:
 
 ## License
 
-Copyright (c) 2025 3-Prism Co. Ltd. All rights reserved.
+Copyright (c) 2025 - 2026. Haixing Hu, Qubit Co. Ltd. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -965,9 +965,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Author
 
-**Hu Haixing** - *3-Prism Co. Ltd.*
+**Haixing Hu** - *Qubit Co. Ltd.*
 
 ---
 
-For more information about the Prism3 ecosystem, visit our [GitHub homepage](https://github.com/3-prism).
+For more information about Qubit libraries, visit the [Qubit Ltd. GitHub organization](https://github.com/qubit-ltd).
 

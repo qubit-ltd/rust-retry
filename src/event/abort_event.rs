@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+use qubit_function::BoxConsumer;
 
 use super::abort_reason::AbortReason;
 
@@ -47,8 +47,8 @@ use super::abort_reason::AbortReason;
 /// with named parameters:
 ///
 /// ```rust
-/// use prism3_retry::event::abort_event::AbortEvent;
-/// use prism3_retry::event::abort_reason::AbortReason;
+/// use qubit_retry::event::abort_event::AbortEvent;
+/// use qubit_retry::event::abort_reason::AbortReason;
 /// use std::time::Duration;
 /// use std::io::{Error, ErrorKind};
 ///
@@ -91,8 +91,8 @@ impl<T> AbortEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     /// use std::time::Duration;
     ///
     /// let reason = AbortReason::Result(String::from("INVALID"));
@@ -117,8 +117,8 @@ impl<T> AbortEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     /// use std::time::Duration;
     ///
     /// let reason = AbortReason::Result(String::from("INVALID"));
@@ -145,8 +145,8 @@ impl<T> AbortEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     /// use std::time::Duration;
     ///
     /// let reason = AbortReason::Result(42);
@@ -170,8 +170,8 @@ impl<T> AbortEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     /// use std::time::Duration;
     ///
     /// let reason = AbortReason::Result(42);
@@ -193,7 +193,7 @@ impl<T> AbortEvent<T> {
 /// Callback function type for listening to abort events, called when
 /// an operation is aborted.
 ///
-/// Uses `BoxReadonlyConsumer` from `prism3-function` to provide
+/// Uses `BoxConsumer` from `qubit-function` to provide
 /// readonly event consumption with single ownership.
 ///
 /// # Generic Parameters
@@ -203,21 +203,21 @@ impl<T> AbortEvent<T> {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::abort_event::{
+/// use qubit_retry::event::abort_event::{
 ///     AbortEvent,
 ///     AbortEventListener
 /// };
-/// use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+/// use qubit_function::BoxConsumer;
 ///
 /// let listener: AbortEventListener<i32> =
-///     BoxReadonlyConsumer::new(|event: &AbortEvent<i32>| {
+///     BoxConsumer::new(|event: &AbortEvent<i32>| {
 ///         println!(
 ///             "Operation aborted, attempted {} times",
 ///             event.attempt_count()
 ///         );
 ///     });
 /// ```
-pub type AbortEventListener<T> = BoxReadonlyConsumer<AbortEvent<T>>;
+pub type AbortEventListener<T> = BoxConsumer<AbortEvent<T>>;
 
 /// Builder for constructing `AbortEvent`
 ///
@@ -231,8 +231,8 @@ pub type AbortEventListener<T> = BoxReadonlyConsumer<AbortEvent<T>>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::abort_event::AbortEvent;
-/// use prism3_retry::event::abort_reason::AbortReason;
+/// use qubit_retry::event::abort_event::AbortEvent;
+/// use qubit_retry::event::abort_reason::AbortReason;
 /// use std::time::Duration;
 ///
 /// let reason = AbortReason::Result(String::from("INVALID"));
@@ -264,7 +264,7 @@ impl<T> AbortEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEventBuilder;
+    /// use qubit_retry::event::abort_event::AbortEventBuilder;
     ///
     /// let builder = AbortEventBuilder::<i32>::new();
     /// ```
@@ -290,8 +290,8 @@ impl<T> AbortEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     ///
     /// let reason = AbortReason::Result(String::from("INVALID"));
     /// let builder = AbortEvent::builder().reason(reason);
@@ -314,7 +314,7 @@ impl<T> AbortEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_event::AbortEvent;
     ///
     /// let builder = AbortEvent::<i32>::builder()
     ///     .attempt_count(2);
@@ -337,7 +337,7 @@ impl<T> AbortEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_event::AbortEvent;
     /// use std::time::Duration;
     ///
     /// let builder = AbortEvent::<i32>::builder()
@@ -363,8 +363,8 @@ impl<T> AbortEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::abort_event::AbortEvent;
-    /// use prism3_retry::event::abort_reason::AbortReason;
+    /// use qubit_retry::event::abort_event::AbortEvent;
+    /// use qubit_retry::event::abort_reason::AbortReason;
     /// use std::time::Duration;
     ///
     /// let reason = AbortReason::Result(42);

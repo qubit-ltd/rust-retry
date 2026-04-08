@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -41,7 +41,7 @@ use std::error::Error as StdError;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::retry_reason::RetryReason;
+/// use qubit_retry::event::retry_reason::RetryReason;
 /// use std::io::{Error, ErrorKind};
 ///
 /// // Retry due to error

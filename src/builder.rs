@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -19,8 +19,8 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::time::Duration;
 
-use prism3_function::predicate::{BoxPredicate, Predicate};
-use prism3_function::readonly_consumer::ReadonlyConsumer;
+use qubit_function::Consumer;
+use qubit_function::{BoxPredicate, Predicate};
 
 use super::event::{
     AbortEventListener, FailureEventListener, RetryEventListener, SuccessEventListener,
@@ -116,7 +116,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryBuilder;
+    /// use qubit_retry::RetryBuilder;
     ///
     /// let builder = RetryBuilder::<String>::new();
     /// ```
@@ -156,7 +156,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::{RetryBuilder, DefaultRetryConfig};
+    /// use qubit_retry::{RetryBuilder, DefaultRetryConfig};
     ///
     /// let config = DefaultRetryConfig::new();
     /// let builder = RetryBuilder::<String, _>::with_config(config);
@@ -226,7 +226,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryBuilder;
+    /// use qubit_retry::RetryBuilder;
     /// use std::time::Duration;
     ///
     /// let executor = RetryBuilder::<String>::new()
@@ -247,7 +247,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryBuilder;
+    /// use qubit_retry::RetryBuilder;
     ///
     /// let executor = RetryBuilder::<String>::new()
     ///     .set_unlimited_operation_timeout()
@@ -526,11 +526,11 @@ where
     /// - Use closures that don't capture any variables
     /// - Capture `'static` data (e.g., `static` variables)
     /// - Capture `Arc`-wrapped data that can outlive the current scope
-    /// - Implement a struct with `ReadonlyConsumer` trait
+    /// - Implement a struct with `Consumer` trait
     ///
     /// **Invalid approach** (won't compile):
     /// ```rust,compile_fail
-    /// # use prism3_retry::RetryBuilder;
+    /// # use qubit_retry::RetryBuilder;
     /// # use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
     /// let local_var = Arc::new(AtomicBool::new(false));
     /// let local_clone = local_var.clone();
@@ -541,15 +541,15 @@ where
     ///
     /// **Valid approach** (using struct):
     /// ```rust
-    /// # use prism3_retry::RetryBuilder;
-    /// # use prism3_function::ReadonlyConsumer;
-    /// # use prism3_retry::RetryEvent;
+    /// # use qubit_retry::RetryBuilder;
+    /// # use qubit_function::Consumer;
+    /// # use qubit_retry::RetryEvent;
     /// # use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
     /// struct MyListener {
     ///     counter: Arc<AtomicUsize>,
     /// }
     ///
-    /// impl ReadonlyConsumer<RetryEvent<i32>> for MyListener {
+    /// impl Consumer<RetryEvent<i32>> for MyListener {
     ///     fn accept(&self, _event: &RetryEvent<i32>) {
     ///         self.counter.fetch_add(1, Ordering::SeqCst);
     ///     }
@@ -562,12 +562,12 @@ where
     ///
     /// # Implementation Note
     ///
-    /// Accepts any type implementing `ReadonlyConsumer<RetryEvent<T>>`
+    /// Accepts any type implementing `Consumer<RetryEvent<T>>`
     /// trait, including closures. Closures automatically implement
-    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    /// `Consumer` trait, so you can pass them directly.
     pub fn on_retry<L>(mut self, listener: L) -> Self
     where
-        L: ReadonlyConsumer<RetryEvent<T>> + 'static,
+        L: Consumer<RetryEvent<T>> + 'static,
     {
         self.on_retry = Some(listener.into_box());
         self
@@ -590,18 +590,18 @@ where
     /// - Use closures that don't capture any variables
     /// - Capture `'static` data (e.g., `static` variables)
     /// - Capture `Arc`-wrapped data that can outlive the current scope
-    /// - Implement a struct with `ReadonlyConsumer` trait
+    /// - Implement a struct with `Consumer` trait
     ///
     /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Accepts any type implementing `ReadonlyConsumer<SuccessEvent<T>>`
+    /// Accepts any type implementing `Consumer<SuccessEvent<T>>`
     /// trait, including closures. Closures automatically implement
-    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    /// `Consumer` trait, so you can pass them directly.
     pub fn on_success<L>(mut self, listener: L) -> Self
     where
-        L: ReadonlyConsumer<SuccessEvent<T>> + 'static,
+        L: Consumer<SuccessEvent<T>> + 'static,
     {
         self.on_success = Some(listener.into_box());
         self
@@ -623,18 +623,18 @@ where
     /// - Use closures that don't capture any variables
     /// - Capture `'static` data (e.g., `static` variables)
     /// - Capture `Arc`-wrapped data that can outlive the current scope
-    /// - Implement a struct with `ReadonlyConsumer` trait
+    /// - Implement a struct with `Consumer` trait
     ///
     /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Accepts any type implementing `ReadonlyConsumer<FailureEvent<T>>`
+    /// Accepts any type implementing `Consumer<FailureEvent<T>>`
     /// trait, including closures. Closures automatically implement
-    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    /// `Consumer` trait, so you can pass them directly.
     pub fn on_failure<L>(mut self, listener: L) -> Self
     where
-        L: ReadonlyConsumer<FailureEvent<T>> + 'static,
+        L: Consumer<FailureEvent<T>> + 'static,
     {
         self.on_failure = Some(listener.into_box());
         self
@@ -663,18 +663,18 @@ where
     /// - Use closures that don't capture any variables
     /// - Capture `'static` data (e.g., `static` variables)
     /// - Capture `Arc`-wrapped data that can outlive the current scope
-    /// - Implement a struct with `ReadonlyConsumer` trait
+    /// - Implement a struct with `Consumer` trait
     ///
     /// See [`on_retry`](Self::on_retry) for detailed examples.
     ///
     /// # Implementation Note
     ///
-    /// Accepts any type implementing `ReadonlyConsumer<AbortEvent<T>>`
+    /// Accepts any type implementing `Consumer<AbortEvent<T>>`
     /// trait, including closures. Closures automatically implement
-    /// `ReadonlyConsumer` trait, so you can pass them directly.
+    /// `Consumer` trait, so you can pass them directly.
     pub fn on_abort<L>(mut self, listener: L) -> Self
     where
-        L: ReadonlyConsumer<AbortEvent<T>> + 'static,
+        L: Consumer<AbortEvent<T>> + 'static,
     {
         self.on_abort = Some(listener.into_box());
         self
@@ -691,7 +691,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryBuilder;
+    /// use qubit_retry::RetryBuilder;
     ///
     /// let executor = RetryBuilder::<String>::new()
     ///     .set_max_attempts(3)

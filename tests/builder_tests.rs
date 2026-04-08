@@ -1,9 +1,17 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # RetryBuilder Integration Tests
 //!
 //! Tests the public API functionality of RetryBuilder.
 
-use prism3_function::ReadonlyConsumer;
-use prism3_retry::{
+use qubit_function::Consumer;
+use qubit_retry::{
     AbortEvent, DefaultRetryConfig, FailureEvent, RetryBuilder, RetryConfig, RetryDelayStrategy,
     RetryEvent, SimpleRetryConfig, SuccessEvent,
 };
@@ -22,24 +30,24 @@ struct TestResult(String);
 #[derive(Clone)]
 struct TestRetryListener;
 
-impl ReadonlyConsumer<RetryEvent<TestResult>> for TestRetryListener {
+impl Consumer<RetryEvent<TestResult>> for TestRetryListener {
     fn accept(&self, _event: &RetryEvent<TestResult>) {
         // Just a dummy implementation for testing builder setup
     }
 
-    fn into_box(self) -> prism3_function::BoxReadonlyConsumer<RetryEvent<TestResult>> {
-        prism3_function::BoxReadonlyConsumer::new(|_: &RetryEvent<TestResult>| {})
+    fn into_box(self) -> qubit_function::BoxConsumer<RetryEvent<TestResult>> {
+        qubit_function::BoxConsumer::new(|_: &RetryEvent<TestResult>| {})
     }
 
-    fn into_rc(self) -> prism3_function::RcReadonlyConsumer<RetryEvent<TestResult>> {
-        prism3_function::RcReadonlyConsumer::new(|_: &RetryEvent<TestResult>| {})
+    fn into_rc(self) -> qubit_function::RcConsumer<RetryEvent<TestResult>> {
+        qubit_function::RcConsumer::new(|_: &RetryEvent<TestResult>| {})
     }
 
-    fn into_arc(self) -> prism3_function::ArcReadonlyConsumer<RetryEvent<TestResult>>
+    fn into_arc(self) -> qubit_function::ArcConsumer<RetryEvent<TestResult>>
     where
         Self: Send + Sync,
     {
-        prism3_function::ArcReadonlyConsumer::new(|_: &RetryEvent<TestResult>| {})
+        qubit_function::ArcConsumer::new(|_: &RetryEvent<TestResult>| {})
     }
 
     fn into_fn(self) -> impl Fn(&RetryEvent<TestResult>) {
@@ -51,24 +59,24 @@ impl ReadonlyConsumer<RetryEvent<TestResult>> for TestRetryListener {
 #[derive(Clone)]
 struct TestSuccessListener;
 
-impl ReadonlyConsumer<SuccessEvent<TestResult>> for TestSuccessListener {
+impl Consumer<SuccessEvent<TestResult>> for TestSuccessListener {
     fn accept(&self, _event: &SuccessEvent<TestResult>) {
         // Just a dummy implementation for testing builder setup
     }
 
-    fn into_box(self) -> prism3_function::BoxReadonlyConsumer<SuccessEvent<TestResult>> {
-        prism3_function::BoxReadonlyConsumer::new(|_: &SuccessEvent<TestResult>| {})
+    fn into_box(self) -> qubit_function::BoxConsumer<SuccessEvent<TestResult>> {
+        qubit_function::BoxConsumer::new(|_: &SuccessEvent<TestResult>| {})
     }
 
-    fn into_rc(self) -> prism3_function::RcReadonlyConsumer<SuccessEvent<TestResult>> {
-        prism3_function::RcReadonlyConsumer::new(|_: &SuccessEvent<TestResult>| {})
+    fn into_rc(self) -> qubit_function::RcConsumer<SuccessEvent<TestResult>> {
+        qubit_function::RcConsumer::new(|_: &SuccessEvent<TestResult>| {})
     }
 
-    fn into_arc(self) -> prism3_function::ArcReadonlyConsumer<SuccessEvent<TestResult>>
+    fn into_arc(self) -> qubit_function::ArcConsumer<SuccessEvent<TestResult>>
     where
         Self: Send + Sync,
     {
-        prism3_function::ArcReadonlyConsumer::new(|_: &SuccessEvent<TestResult>| {})
+        qubit_function::ArcConsumer::new(|_: &SuccessEvent<TestResult>| {})
     }
 
     fn into_fn(self) -> impl Fn(&SuccessEvent<TestResult>) {
@@ -80,24 +88,24 @@ impl ReadonlyConsumer<SuccessEvent<TestResult>> for TestSuccessListener {
 #[derive(Clone)]
 struct TestFailureListener;
 
-impl ReadonlyConsumer<FailureEvent<TestResult>> for TestFailureListener {
+impl Consumer<FailureEvent<TestResult>> for TestFailureListener {
     fn accept(&self, _event: &FailureEvent<TestResult>) {
         // Just a dummy implementation for testing builder setup
     }
 
-    fn into_box(self) -> prism3_function::BoxReadonlyConsumer<FailureEvent<TestResult>> {
-        prism3_function::BoxReadonlyConsumer::new(|_: &FailureEvent<TestResult>| {})
+    fn into_box(self) -> qubit_function::BoxConsumer<FailureEvent<TestResult>> {
+        qubit_function::BoxConsumer::new(|_: &FailureEvent<TestResult>| {})
     }
 
-    fn into_rc(self) -> prism3_function::RcReadonlyConsumer<FailureEvent<TestResult>> {
-        prism3_function::RcReadonlyConsumer::new(|_: &FailureEvent<TestResult>| {})
+    fn into_rc(self) -> qubit_function::RcConsumer<FailureEvent<TestResult>> {
+        qubit_function::RcConsumer::new(|_: &FailureEvent<TestResult>| {})
     }
 
-    fn into_arc(self) -> prism3_function::ArcReadonlyConsumer<FailureEvent<TestResult>>
+    fn into_arc(self) -> qubit_function::ArcConsumer<FailureEvent<TestResult>>
     where
         Self: Send + Sync,
     {
-        prism3_function::ArcReadonlyConsumer::new(|_: &FailureEvent<TestResult>| {})
+        qubit_function::ArcConsumer::new(|_: &FailureEvent<TestResult>| {})
     }
 
     fn into_fn(self) -> impl Fn(&FailureEvent<TestResult>) {
@@ -109,24 +117,24 @@ impl ReadonlyConsumer<FailureEvent<TestResult>> for TestFailureListener {
 #[derive(Clone)]
 struct TestAbortListener;
 
-impl ReadonlyConsumer<AbortEvent<TestResult>> for TestAbortListener {
+impl Consumer<AbortEvent<TestResult>> for TestAbortListener {
     fn accept(&self, _event: &AbortEvent<TestResult>) {
         // Just a dummy implementation for testing builder setup
     }
 
-    fn into_box(self) -> prism3_function::BoxReadonlyConsumer<AbortEvent<TestResult>> {
-        prism3_function::BoxReadonlyConsumer::new(|_: &AbortEvent<TestResult>| {})
+    fn into_box(self) -> qubit_function::BoxConsumer<AbortEvent<TestResult>> {
+        qubit_function::BoxConsumer::new(|_: &AbortEvent<TestResult>| {})
     }
 
-    fn into_rc(self) -> prism3_function::RcReadonlyConsumer<AbortEvent<TestResult>> {
-        prism3_function::RcReadonlyConsumer::new(|_: &AbortEvent<TestResult>| {})
+    fn into_rc(self) -> qubit_function::RcConsumer<AbortEvent<TestResult>> {
+        qubit_function::RcConsumer::new(|_: &AbortEvent<TestResult>| {})
     }
 
-    fn into_arc(self) -> prism3_function::ArcReadonlyConsumer<AbortEvent<TestResult>>
+    fn into_arc(self) -> qubit_function::ArcConsumer<AbortEvent<TestResult>>
     where
         Self: Send + Sync,
     {
-        prism3_function::ArcReadonlyConsumer::new(|_: &AbortEvent<TestResult>| {})
+        qubit_function::ArcConsumer::new(|_: &AbortEvent<TestResult>| {})
     }
 
     fn into_fn(self) -> impl Fn(&AbortEvent<TestResult>) {

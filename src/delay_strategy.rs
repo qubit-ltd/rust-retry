@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -14,7 +14,7 @@
 //!
 //! Haixing Hu
 
-use rand::Rng;
+use rand::RngExt;
 use std::time::Duration;
 
 /// Retry delay strategy enum
@@ -100,7 +100,7 @@ impl RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     ///
     /// let strategy = RetryDelayStrategy::none();
     /// let delay = strategy.calculate_delay(1, 0.0);
@@ -125,7 +125,7 @@ impl RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let strategy = RetryDelayStrategy::fixed(Duration::from_secs(1));
@@ -152,7 +152,7 @@ impl RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let strategy = RetryDelayStrategy::random(
@@ -187,7 +187,7 @@ impl RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let strategy = RetryDelayStrategy::exponential_backoff(
@@ -226,7 +226,7 @@ impl RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let strategy = RetryDelayStrategy::fixed(Duration::from_secs(1));
@@ -335,7 +335,7 @@ impl Clone for RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let original = RetryDelayStrategy::fixed(Duration::from_secs(1));
@@ -383,7 +383,7 @@ impl Default for RetryDelayStrategy {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryDelayStrategy;
+    /// use qubit_retry::RetryDelayStrategy;
     /// use std::time::Duration;
     ///
     /// let strategy = RetryDelayStrategy::default();

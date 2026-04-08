@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -40,8 +40,8 @@ use super::{abort_reason::AbortReason, retry_reason::RetryReason};
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::retry_decision::RetryDecision;
-/// use prism3_retry::event::retry_reason::RetryReason;
+/// use qubit_retry::event::retry_decision::RetryDecision;
+/// use qubit_retry::event::retry_reason::RetryReason;
 /// use std::io::{Error, ErrorKind};
 ///
 /// fn check_result(value: i32) -> RetryDecision<i32> {

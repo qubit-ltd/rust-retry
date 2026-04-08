@@ -1,9 +1,17 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # DefaultRetryConfig Integration Tests
 //!
 //! Tests public API functionality of DefaultRetryConfig.
 
-use prism3_config::{Config, Configurable};
-use prism3_retry::{DefaultRetryConfig, RetryConfig, RetryDelayStrategy};
+use qubit_config::{Config, Configurable};
+use qubit_retry::{DefaultRetryConfig, RetryConfig, RetryDelayStrategy};
 use std::time::Duration;
 
 // === Basic config tests ===

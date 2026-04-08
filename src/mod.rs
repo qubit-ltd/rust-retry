@@ -1,3 +1,11 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # Retry module
 //!
 //! This is a fully-featured, type-safe retry management system, ported from Java's `ltd.qubit.commons.util.retry` package to Rust.
@@ -37,7 +45,7 @@
 //! - ✅ **Flexible Error Handling** - Result-based error handling with error type identification
 //! - ✅ **Result-Driven Retry** - Support retry logic based on return values
 //! - ✅ **Event Listening** - Support various event callbacks during retry process
-//! - ✅ **Configuration Integration** - Seamless integration with prism3-config's config module
+//! - ✅ **Configuration Integration** - Seamless integration with qubit-config's config module
 //! - ✅ **Timeout Control** - Support single operation timeout and overall timeout control
 //! - ✅ **Sync and Async** - Support both synchronous and asynchronous operation retries
 //!
@@ -45,7 +53,7 @@
 //!
 //! ### Basic Synchronous Retry
 //! ```rust
-//! use prism3_retry::{RetryBuilder, RetryDelayStrategy};
+//! use qubit_retry::{RetryBuilder, RetryDelayStrategy};
 //! use std::time::Duration;
 //!
 //! // Basic retry configuration
@@ -65,7 +73,7 @@
 //!
 //! ### Async Retry with Timeout Control
 //! ```rust,no_run
-//! use prism3_retry::RetryBuilder;
+//! use qubit_retry::RetryBuilder;
 //! use std::time::Duration;
 //!
 //! # async fn example() {
@@ -121,7 +129,7 @@ pub type RetryResult<T> = Result<T, RetryError>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::DefaultRetryBuilder;
+/// use qubit_retry::DefaultRetryBuilder;
 ///
 /// let builder = DefaultRetryBuilder::<String>::new()
 ///     .set_max_attempts(3)
@@ -136,7 +144,7 @@ pub type DefaultRetryBuilder<T> = RetryBuilder<T, DefaultRetryConfig>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::{RetryBuilder, DefaultRetryExecutor};
+/// use qubit_retry::{RetryBuilder, DefaultRetryExecutor};
 ///
 /// let executor: DefaultRetryExecutor<String> = RetryBuilder::new()
 ///     .set_max_attempts(3)

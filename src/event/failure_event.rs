@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -17,7 +17,7 @@
 use std::error::Error as StdError;
 use std::time::Duration;
 
-use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+use qubit_function::BoxConsumer;
 
 /// Failure event
 ///
@@ -47,7 +47,7 @@ use prism3_function::readonly_consumer::BoxReadonlyConsumer;
 /// parameters:
 ///
 /// ```rust
-/// use prism3_retry::event::failure_event::FailureEvent;
+/// use qubit_retry::event::failure_event::FailureEvent;
 /// use std::time::Duration;
 /// use std::io::{Error, ErrorKind};
 ///
@@ -89,7 +89,7 @@ impl<T> FailureEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let event = FailureEvent::<String>::builder()
@@ -113,7 +113,7 @@ impl<T> FailureEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     /// use std::io::{Error, ErrorKind};
     ///
@@ -139,7 +139,7 @@ impl<T> FailureEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let event = FailureEvent::builder()
@@ -165,7 +165,7 @@ impl<T> FailureEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let event = FailureEvent::<i32>::builder()
@@ -187,7 +187,7 @@ impl<T> FailureEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let duration = Duration::from_secs(10);
@@ -207,7 +207,7 @@ impl<T> FailureEvent<T> {
 /// Callback function type for listening to failure events, called
 /// when all retry attempts have failed.
 ///
-/// Uses `BoxReadonlyConsumer` from `prism3-function` to provide
+/// Uses `BoxConsumer` from `qubit-function` to provide
 /// readonly event consumption with single ownership.
 ///
 /// # Generic Parameters
@@ -217,21 +217,21 @@ impl<T> FailureEvent<T> {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::failure_event::{
+/// use qubit_retry::event::failure_event::{
 ///     FailureEvent,
 ///     FailureEventListener
 /// };
-/// use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+/// use qubit_function::BoxConsumer;
 ///
 /// let listener: FailureEventListener<i32> =
-///     BoxReadonlyConsumer::new(|event: &FailureEvent<i32>| {
+///     BoxConsumer::new(|event: &FailureEvent<i32>| {
 ///         println!(
 ///             "Operation failed, attempted {} times",
 ///             event.attempt_count()
 ///         );
 ///     });
 /// ```
-pub type FailureEventListener<T> = BoxReadonlyConsumer<FailureEvent<T>>;
+pub type FailureEventListener<T> = BoxConsumer<FailureEvent<T>>;
 
 /// Builder for constructing `FailureEvent`
 ///
@@ -245,7 +245,7 @@ pub type FailureEventListener<T> = BoxReadonlyConsumer<FailureEvent<T>>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::failure_event::FailureEvent;
+/// use qubit_retry::event::failure_event::FailureEvent;
 /// use std::time::Duration;
 ///
 /// let event = FailureEvent::<String>::builder()
@@ -276,7 +276,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEventBuilder;
+    /// use qubit_retry::event::failure_event::FailureEventBuilder;
     ///
     /// let builder = FailureEventBuilder::<i32>::new();
     /// ```
@@ -303,7 +303,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::io::{Error, ErrorKind};
     ///
     /// let error = Error::new(ErrorKind::TimedOut, "Timeout");
@@ -328,7 +328,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     ///
     /// let builder = FailureEvent::builder()
     ///     .last_result(Some(String::from("Failed")));
@@ -351,7 +351,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     ///
     /// let builder = FailureEvent::<i32>::builder()
     ///     .attempt_count(5);
@@ -374,7 +374,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let builder = FailureEvent::<i32>::builder()
@@ -397,7 +397,7 @@ impl<T> FailureEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::failure_event::FailureEvent;
+    /// use qubit_retry::event::failure_event::FailureEvent;
     /// use std::time::Duration;
     ///
     /// let event = FailureEvent::<String>::builder()

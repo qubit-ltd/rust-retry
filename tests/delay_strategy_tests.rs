@@ -1,8 +1,16 @@
+/*******************************************************************************
+ *
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
+ *
+ *    All rights reserved.
+ *
+ ******************************************************************************/
 //! # Retry Delay Strategy Tests
 //!
 //! Covers various delay calculation and parameter validation behaviors of `RetryDelayStrategy`.
 
-use prism3_retry::RetryDelayStrategy;
+use qubit_retry::RetryDelayStrategy;
 use std::time::Duration;
 
 #[test]

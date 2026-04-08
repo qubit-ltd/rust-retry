@@ -117,14 +117,14 @@ jobs:
 
       - name: Generate coverage
         run: |
-          cd prism3-retry
+          cd qubit-retry
           cargo llvm-cov --lcov --output-path lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: prism3-retry/lcov.info
-          flags: prism3-retry
+          files: qubit-retry/lcov.info
+          flags: qubit-retry
 ```
 
 ## 常见问题

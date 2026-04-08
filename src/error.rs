@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -37,7 +37,7 @@ use std::fmt;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::RetryError;
+/// use qubit_retry::RetryError;
 ///
 /// // Create maximum attempts exceeded error
 /// let error = RetryError::max_attempts_exceeded(5, 3);
@@ -242,7 +242,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let error = RetryError::max_attempts_exceeded(5, 3);
     /// assert!(error.to_string().contains("Maximum attempts exceeded"));
@@ -270,7 +270,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     /// use std::time::Duration;
     ///
     /// let error = RetryError::max_duration_exceeded(
@@ -305,7 +305,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     /// use std::time::Duration;
     ///
     /// let error = RetryError::operation_timeout(
@@ -333,7 +333,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let error = RetryError::aborted("User cancelled operation");
     /// assert!(error.to_string().contains("Operation aborted"));
@@ -359,7 +359,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let error = RetryError::config_error("Maximum retry count cannot be negative");
     /// assert!(error.to_string().contains("Configuration error"));
@@ -385,7 +385,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let error = RetryError::delay_strategy_error("Delay time calculation overflow");
     /// assert!(error.to_string().contains("Delay strategy error"));
@@ -411,7 +411,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
     /// let retry_error = RetryError::execution_error(io_error);
@@ -439,7 +439,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
     /// let boxed_error = Box::new(io_error);
@@ -465,7 +465,7 @@ impl RetryError {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::RetryError;
+    /// use qubit_retry::RetryError;
     ///
     /// let error = RetryError::other("Unknown error type");
     /// assert!(error.to_string().contains("Other error"));
@@ -489,7 +489,7 @@ impl RetryError {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::{RetryResult, RetryError};
+/// use qubit_retry::{RetryResult, RetryError};
 ///
 /// fn retry_operation() -> RetryResult<String> {
 ///     // Simulate retry operation
@@ -518,7 +518,7 @@ pub type RetryResult<T> = Result<T, RetryError>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::{RetryError, RetryResult};
+/// use qubit_retry::{RetryError, RetryResult};
 ///
 /// fn io_operation() -> RetryResult<()> {
 ///     let file = std::fs::File::open("nonexistent_file.txt")?;
@@ -551,7 +551,7 @@ impl From<std::io::Error> for RetryError {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::RetryError;
+/// use qubit_retry::RetryError;
 ///
 /// let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
 /// let boxed_error: Box<dyn std::error::Error + Send + Sync> = Box::new(io_error);

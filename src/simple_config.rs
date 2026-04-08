@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -33,7 +33,7 @@ use std::time::Duration;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::{SimpleRetryConfig, RetryConfig, RetryDelayStrategy};
+/// use qubit_retry::{SimpleRetryConfig, RetryConfig, RetryDelayStrategy};
 /// use std::time::Duration;
 ///
 /// let mut config = SimpleRetryConfig::new();
@@ -73,7 +73,7 @@ impl SimpleRetryConfig {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::{SimpleRetryConfig, RetryConfig};
+    /// use qubit_retry::{SimpleRetryConfig, RetryConfig};
     ///
     /// let config = SimpleRetryConfig::new();
     /// assert_eq!(config.max_attempts(), 5);
@@ -105,7 +105,7 @@ impl SimpleRetryConfig {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::{SimpleRetryConfig, RetryDelayStrategy};
+    /// use qubit_retry::{SimpleRetryConfig, RetryDelayStrategy};
     /// use std::time::Duration;
     ///
     /// let config = SimpleRetryConfig::with_params(

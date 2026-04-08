@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+use qubit_function::BoxConsumer;
 
 /// Success event
 ///
@@ -46,7 +46,7 @@ use prism3_function::readonly_consumer::BoxReadonlyConsumer;
 /// code with named parameters:
 ///
 /// ```rust
-/// use prism3_retry::event::success_event::SuccessEvent;
+/// use qubit_retry::event::success_event::SuccessEvent;
 /// use std::time::Duration;
 ///
 /// // Using builder pattern - more readable
@@ -80,7 +80,7 @@ impl<T> SuccessEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let event = SuccessEvent::builder()
@@ -103,7 +103,7 @@ impl<T> SuccessEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let event = SuccessEvent::builder()
@@ -126,7 +126,7 @@ impl<T> SuccessEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let event = SuccessEvent::builder()
@@ -149,7 +149,7 @@ impl<T> SuccessEvent<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let duration = Duration::from_millis(500);
@@ -170,7 +170,7 @@ impl<T> SuccessEvent<T> {
 /// Callback function type for listening to success events, called
 /// when an operation completes successfully.
 ///
-/// Uses `BoxReadonlyConsumer` from `prism3-function` to provide
+/// Uses `BoxConsumer` from `qubit-function` to provide
 /// readonly event consumption with single ownership.
 ///
 /// # Generic Parameters
@@ -180,21 +180,21 @@ impl<T> SuccessEvent<T> {
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::success_event::{
+/// use qubit_retry::event::success_event::{
 ///     SuccessEvent,
 ///     SuccessEventListener
 /// };
-/// use prism3_function::readonly_consumer::BoxReadonlyConsumer;
+/// use qubit_function::BoxConsumer;
 ///
 /// let listener: SuccessEventListener<i32> =
-///     BoxReadonlyConsumer::new(|event: &SuccessEvent<i32>| {
+///     BoxConsumer::new(|event: &SuccessEvent<i32>| {
 ///         println!(
 ///             "Operation succeeded, attempted {} times",
 ///             event.attempt_count()
 ///         );
 ///     });
 /// ```
-pub type SuccessEventListener<T> = BoxReadonlyConsumer<SuccessEvent<T>>;
+pub type SuccessEventListener<T> = BoxConsumer<SuccessEvent<T>>;
 
 /// Builder for constructing `SuccessEvent`
 ///
@@ -208,7 +208,7 @@ pub type SuccessEventListener<T> = BoxReadonlyConsumer<SuccessEvent<T>>;
 /// # Example
 ///
 /// ```rust
-/// use prism3_retry::event::success_event::SuccessEvent;
+/// use qubit_retry::event::success_event::SuccessEvent;
 /// use std::time::Duration;
 ///
 /// let event = SuccessEvent::builder()
@@ -239,7 +239,7 @@ impl<T> SuccessEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEventBuilder;
+    /// use qubit_retry::event::success_event::SuccessEventBuilder;
     ///
     /// let builder = SuccessEventBuilder::<i32>::new();
     /// ```
@@ -265,7 +265,7 @@ impl<T> SuccessEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     ///
     /// let builder = SuccessEvent::builder()
     ///     .result(String::from("Success"));
@@ -288,7 +288,7 @@ impl<T> SuccessEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     ///
     /// let builder = SuccessEvent::<i32>::builder()
     ///     .attempt_count(3);
@@ -311,7 +311,7 @@ impl<T> SuccessEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let builder = SuccessEvent::<i32>::builder()
@@ -338,7 +338,7 @@ impl<T> SuccessEventBuilder<T> {
     /// # Example
     ///
     /// ```rust
-    /// use prism3_retry::event::success_event::SuccessEvent;
+    /// use qubit_retry::event::success_event::SuccessEvent;
     /// use std::time::Duration;
     ///
     /// let event = SuccessEvent::builder()

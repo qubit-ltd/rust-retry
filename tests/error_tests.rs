@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *    Copyright (c) 2025.
- *    3-Prism Co. Ltd.
+ *    Copyright (c) 2025 - 2026.
+ *    Haixing Hu, Qubit Co. Ltd.
  *
  *    All rights reserved.
  *
@@ -10,7 +10,7 @@
 //!
 //! Tests various features and behaviors of RetryError.
 
-use prism3_retry::{RetryError, RetryResult};
+use qubit_retry::{RetryError, RetryResult};
 use std::error::Error;
 use std::io;
 use std::time::Duration;

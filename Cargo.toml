@@ -1,16 +1,16 @@
 [package]
-name = "prism3-retry"
-version = "0.1.0"
+name = "qubit-retry"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.70"
-authors = ["Hu Haixing <starfish.hu@gmail.com>"]
+authors = ["Haixing Hu <starfish.hu@gmail.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/3-prism/prism3-rust-retry"
+repository = "https://github.com/qubit-ltd/rust-retry"
 description = "Retry module, providing a feature-complete, type-safe retry management system with support for multiple delay strategies and event listeners"
-homepage = "https://github.com/3-prism/prism3-rust-retry"
-documentation = "https://docs.rs/prism3-retry"
+homepage = "https://github.com/qubit-ltd/rust-retry"
+documentation = "https://docs.rs/qubit-retry"
 readme = "README.md"
-keywords = ["retry", "resilience", "backoff", "fault-tolerance", "prism3"]
+keywords = ["retry", "resilience", "backoff", "fault-tolerance", "qubit"]
 categories = ["development-tools", "asynchronous"]
 exclude = [
     "coverage.sh",
@@ -23,14 +23,12 @@ exclude = [
 ]
 
 [lib]
-name = "prism3_retry"
+name = "qubit_retry"
 doctest = false
 
 [dependencies]
-# Core dependencies
-prism3-core = "0.1.1"
-prism3-config = "0.1.1"
-prism3-function = "0.1.0"
+qubit-config = "0.2.0"
+qubit-function = "0.7.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0.17"
@@ -41,7 +39,7 @@ tokio = { version = "1.0", features = ["time", "rt"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Random number generation
-rand = "0.9.2"
+rand = "0.10.0"
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full", "test-util"] }
