@@ -78,6 +78,7 @@ impl SimpleRetryConfig {
     /// let config = SimpleRetryConfig::new();
     /// assert_eq!(config.max_attempts(), 5);
     /// ```
+    #[inline]
     pub fn new() -> Self {
         Self {
             max_attempts: Self::DEFAULT_MAX_ATTEMPTS,
@@ -116,6 +117,7 @@ impl SimpleRetryConfig {
     ///     Some(Duration::from_secs(5)),
     /// );
     /// ```
+    #[inline]
     pub fn with_params(
         max_attempts: u32,
         delay_strategy: RetryDelayStrategy,
@@ -134,52 +136,63 @@ impl SimpleRetryConfig {
 }
 
 impl Default for SimpleRetryConfig {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl RetryConfig for SimpleRetryConfig {
+    #[inline]
     fn max_attempts(&self) -> u32 {
         self.max_attempts
     }
 
+    #[inline]
     fn set_max_attempts(&mut self, max_attempts: u32) -> &mut Self {
         self.max_attempts = max_attempts;
         self
     }
 
+    #[inline]
     fn max_duration(&self) -> Option<Duration> {
         self.max_duration
     }
 
+    #[inline]
     fn set_max_duration(&mut self, max_duration: Option<Duration>) -> &mut Self {
         self.max_duration = max_duration;
         self
     }
 
+    #[inline]
     fn operation_timeout(&self) -> Option<Duration> {
         self.operation_timeout
     }
 
+    #[inline]
     fn set_operation_timeout(&mut self, timeout: Option<Duration>) -> &mut Self {
         self.operation_timeout = timeout;
         self
     }
 
+    #[inline]
     fn delay_strategy(&self) -> RetryDelayStrategy {
         self.delay_strategy.clone()
     }
 
+    #[inline]
     fn set_delay_strategy(&mut self, delay_strategy: RetryDelayStrategy) -> &mut Self {
         self.delay_strategy = delay_strategy;
         self
     }
 
+    #[inline]
     fn jitter_factor(&self) -> f64 {
         self.jitter_factor
     }
 
+    #[inline]
     fn set_jitter_factor(&mut self, jitter_factor: f64) -> &mut Self {
         self.jitter_factor = jitter_factor;
         self

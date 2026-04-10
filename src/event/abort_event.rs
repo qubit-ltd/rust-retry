@@ -103,6 +103,7 @@ impl<T> AbortEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 1);
     /// ```
+    #[inline]
     pub fn builder() -> AbortEventBuilder<T> {
         AbortEventBuilder::new()
     }
@@ -132,6 +133,7 @@ impl<T> AbortEvent<T> {
     ///     _ => panic!("Wrong reason type"),
     /// }
     /// ```
+    #[inline]
     pub fn reason(&self) -> &AbortReason<T> {
         &self.reason
     }
@@ -157,6 +159,7 @@ impl<T> AbortEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 2);
     /// ```
+    #[inline]
     pub fn attempt_count(&self) -> u32 {
         self.attempt_count
     }
@@ -183,6 +186,7 @@ impl<T> AbortEvent<T> {
     ///     .build();
     /// assert_eq!(event.total_duration(), duration);
     /// ```
+    #[inline]
     pub fn total_duration(&self) -> Duration {
         self.total_duration
     }
@@ -269,6 +273,7 @@ impl<T> AbortEventBuilder<T> {
     /// let builder = AbortEventBuilder::<i32>::new();
     /// ```
     #[allow(clippy::new_without_default)]
+    #[inline]
     pub fn new() -> Self {
         Self {
             reason: None,
@@ -296,6 +301,7 @@ impl<T> AbortEventBuilder<T> {
     /// let reason = AbortReason::Result(String::from("INVALID"));
     /// let builder = AbortEvent::builder().reason(reason);
     /// ```
+    #[inline]
     pub fn reason(mut self, reason: AbortReason<T>) -> Self {
         self.reason = Some(reason);
         self
@@ -319,6 +325,7 @@ impl<T> AbortEventBuilder<T> {
     /// let builder = AbortEvent::<i32>::builder()
     ///     .attempt_count(2);
     /// ```
+    #[inline]
     pub fn attempt_count(mut self, attempt_count: u32) -> Self {
         self.attempt_count = attempt_count;
         self
@@ -343,6 +350,7 @@ impl<T> AbortEventBuilder<T> {
     /// let builder = AbortEvent::<i32>::builder()
     ///     .total_duration(Duration::from_millis(500));
     /// ```
+    #[inline]
     pub fn total_duration(mut self, total_duration: Duration) -> Self {
         self.total_duration = total_duration;
         self
@@ -374,6 +382,7 @@ impl<T> AbortEventBuilder<T> {
     ///     .total_duration(Duration::from_millis(100))
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> AbortEvent<T> {
         AbortEvent {
             reason: self.reason.expect("reason must be set"),

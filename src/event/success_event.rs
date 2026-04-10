@@ -90,6 +90,7 @@ impl<T> SuccessEvent<T> {
     ///     .build();
     /// assert_eq!(event.result(), &42);
     /// ```
+    #[inline]
     pub fn builder() -> SuccessEventBuilder<T> {
         SuccessEventBuilder::new()
     }
@@ -113,6 +114,7 @@ impl<T> SuccessEvent<T> {
     ///     .build();
     /// assert_eq!(event.result(), "Success");
     /// ```
+    #[inline]
     pub fn result(&self) -> &T {
         &self.result
     }
@@ -136,6 +138,7 @@ impl<T> SuccessEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 3);
     /// ```
+    #[inline]
     pub fn attempt_count(&self) -> u32 {
         self.attempt_count
     }
@@ -160,6 +163,7 @@ impl<T> SuccessEvent<T> {
     ///     .build();
     /// assert_eq!(event.total_duration(), duration);
     /// ```
+    #[inline]
     pub fn total_duration(&self) -> Duration {
         self.total_duration
     }
@@ -244,6 +248,7 @@ impl<T> SuccessEventBuilder<T> {
     /// let builder = SuccessEventBuilder::<i32>::new();
     /// ```
     #[allow(clippy::new_without_default)]
+    #[inline]
     pub fn new() -> Self {
         Self {
             result: None,
@@ -270,6 +275,7 @@ impl<T> SuccessEventBuilder<T> {
     /// let builder = SuccessEvent::builder()
     ///     .result(String::from("Success"));
     /// ```
+    #[inline]
     pub fn result(mut self, result: T) -> Self {
         self.result = Some(result);
         self
@@ -293,6 +299,7 @@ impl<T> SuccessEventBuilder<T> {
     /// let builder = SuccessEvent::<i32>::builder()
     ///     .attempt_count(3);
     /// ```
+    #[inline]
     pub fn attempt_count(mut self, attempt_count: u32) -> Self {
         self.attempt_count = attempt_count;
         self
@@ -317,6 +324,7 @@ impl<T> SuccessEventBuilder<T> {
     /// let builder = SuccessEvent::<i32>::builder()
     ///     .total_duration(Duration::from_millis(500));
     /// ```
+    #[inline]
     pub fn total_duration(mut self, total_duration: Duration) -> Self {
         self.total_duration = total_duration;
         self
@@ -347,6 +355,7 @@ impl<T> SuccessEventBuilder<T> {
     ///     .total_duration(Duration::from_millis(100))
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> SuccessEvent<T> {
         SuccessEvent {
             result: self.result.expect("result must be set"),

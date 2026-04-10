@@ -106,6 +106,7 @@ impl RetryDelayStrategy {
     /// let delay = strategy.calculate_delay(1, 0.0);
     /// assert_eq!(delay.as_nanos(), 0);
     /// ```
+    #[inline]
     pub fn none() -> Self {
         RetryDelayStrategy::None
     }
@@ -132,6 +133,7 @@ impl RetryDelayStrategy {
     /// let delay = strategy.calculate_delay(1, 0.0);
     /// assert_eq!(delay, Duration::from_secs(1));
     /// ```
+    #[inline]
     pub fn fixed(delay: Duration) -> Self {
         RetryDelayStrategy::Fixed { delay }
     }
@@ -163,6 +165,7 @@ impl RetryDelayStrategy {
     /// assert!(delay >= Duration::from_millis(100));
     /// assert!(delay <= Duration::from_millis(1000));
     /// ```
+    #[inline]
     pub fn random(min_delay: Duration, max_delay: Duration) -> Self {
         RetryDelayStrategy::Random {
             min_delay,
@@ -200,6 +203,7 @@ impl RetryDelayStrategy {
     /// assert_eq!(delay1, Duration::from_millis(100));
     /// assert_eq!(delay2, Duration::from_millis(200));
     /// ```
+    #[inline]
     pub fn exponential_backoff(
         initial_delay: Duration,
         max_delay: Duration,

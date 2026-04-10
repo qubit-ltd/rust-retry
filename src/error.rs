@@ -217,6 +217,7 @@ impl Error for RetryError {
     /// # Returns
     ///
     /// Returns the root cause of the error, or None if it doesn't exist
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             RetryError::ExecutionError { source } => Some(source.as_ref()),
@@ -247,6 +248,7 @@ impl RetryError {
     /// let error = RetryError::max_attempts_exceeded(5, 3);
     /// assert!(error.to_string().contains("Maximum attempts exceeded"));
     /// ```
+    #[inline]
     pub fn max_attempts_exceeded(attempts: u32, max_attempts: u32) -> Self {
         RetryError::MaxAttemptsExceeded {
             attempts,
@@ -279,6 +281,7 @@ impl RetryError {
     /// );
     /// assert!(error.to_string().contains("Maximum duration exceeded"));
     /// ```
+    #[inline]
     pub fn max_duration_exceeded(
         duration: std::time::Duration,
         max_duration: std::time::Duration,
@@ -314,6 +317,7 @@ impl RetryError {
     /// );
     /// assert!(error.to_string().contains("Operation timeout"));
     /// ```
+    #[inline]
     pub fn operation_timeout(duration: std::time::Duration, timeout: std::time::Duration) -> Self {
         RetryError::OperationTimeout { duration, timeout }
     }
@@ -338,6 +342,7 @@ impl RetryError {
     /// let error = RetryError::aborted("User cancelled operation");
     /// assert!(error.to_string().contains("Operation aborted"));
     /// ```
+    #[inline]
     pub fn aborted(reason: &str) -> Self {
         RetryError::Aborted {
             reason: reason.to_string(),
@@ -364,6 +369,7 @@ impl RetryError {
     /// let error = RetryError::config_error("Maximum retry count cannot be negative");
     /// assert!(error.to_string().contains("Configuration error"));
     /// ```
+    #[inline]
     pub fn config_error(message: &str) -> Self {
         RetryError::ConfigError {
             message: message.to_string(),
@@ -390,6 +396,7 @@ impl RetryError {
     /// let error = RetryError::delay_strategy_error("Delay time calculation overflow");
     /// assert!(error.to_string().contains("Delay strategy error"));
     /// ```
+    #[inline]
     pub fn delay_strategy_error(message: &str) -> Self {
         RetryError::DelayStrategyError {
             message: message.to_string(),
@@ -417,6 +424,7 @@ impl RetryError {
     /// let retry_error = RetryError::execution_error(io_error);
     /// assert!(retry_error.to_string().contains("Execution error"));
     /// ```
+    #[inline]
     pub fn execution_error<E: Error + Send + Sync + 'static>(error: E) -> Self {
         RetryError::ExecutionError {
             source: Box::new(error),
@@ -446,6 +454,7 @@ impl RetryError {
     /// let retry_error = RetryError::execution_error_box(boxed_error);
     /// assert!(retry_error.to_string().contains("Execution error"));
     /// ```
+    #[inline]
     pub fn execution_error_box(error: Box<dyn Error + Send + Sync>) -> Self {
         RetryError::ExecutionError { source: error }
     }
@@ -470,6 +479,7 @@ impl RetryError {
     /// let error = RetryError::other("Unknown error type");
     /// assert!(error.to_string().contains("Other error"));
     /// ```
+    #[inline]
     pub fn other(message: &str) -> Self {
         RetryError::Other {
             message: message.to_string(),
@@ -528,6 +538,7 @@ pub type RetryResult<T> = Result<T, RetryError>;
 /// ```
 impl From<std::io::Error> for RetryError {
     /// Convert std::io::Error to RetryError
+    #[inline]
     fn from(error: std::io::Error) -> Self {
         RetryError::ExecutionError {
             source: Box::new(error),
@@ -559,6 +570,7 @@ impl From<std::io::Error> for RetryError {
 /// ```
 impl From<Box<dyn Error + Send + Sync>> for RetryError {
     /// Convert boxed error to RetryError
+    #[inline]
     fn from(error: Box<dyn Error + Send + Sync>) -> Self {
         RetryError::ExecutionError { source: error }
     }

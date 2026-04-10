@@ -123,6 +123,7 @@ where
     C: RetryConfig,
 {
     /// Create retry executor
+    #[inline]
     pub(crate) fn new(builder: RetryBuilder<T, C>) -> Self {
         Self { builder }
     }
@@ -249,6 +250,7 @@ where
     /// # Returns
     ///
     /// Returns true if maximum attempts reached, false otherwise
+    #[inline]
     fn check_max_attempts_exceeded(&self, attempt: u32, max_attempts: u32) -> bool {
         attempt >= max_attempts
     }
@@ -733,6 +735,7 @@ where
     }
 
     /// Get builder configuration
+    #[inline]
     pub fn config(&self) -> &RetryBuilder<T, C> {
         &self.builder
     }

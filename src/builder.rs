@@ -120,6 +120,7 @@ where
     ///
     /// let builder = RetryBuilder::<String>::new();
     /// ```
+    #[inline]
     pub fn new() -> Self {
         Self {
             config: DefaultRetryConfig::new(),
@@ -161,6 +162,7 @@ where
     /// let config = DefaultRetryConfig::new();
     /// let builder = RetryBuilder::<String, _>::with_config(config);
     /// ```
+    #[inline]
     pub fn with_config(config: C) -> Self {
         Self {
             config,
@@ -180,22 +182,26 @@ where
     // --- Basic retry control methods ---
 
     /// Get maximum number of attempts
+    #[inline]
     pub fn max_attempts(&self) -> u32 {
         self.config.max_attempts()
     }
 
     /// Set maximum number of attempts
+    #[inline]
     pub fn set_max_attempts(mut self, max_attempts: u32) -> Self {
         self.config.set_max_attempts(max_attempts);
         self
     }
 
     /// Get maximum duration for executing retries
+    #[inline]
     pub fn max_duration(&self) -> Option<Duration> {
         self.config.max_duration()
     }
 
     /// Set maximum duration for executing retries
+    #[inline]
     pub fn set_max_duration(mut self, max_duration: Option<Duration>) -> Self {
         self.config.set_max_duration(max_duration);
         self
@@ -210,6 +216,7 @@ where
     /// # Returns
     ///
     /// Returns `Some(Duration)` if there is a timeout limit, `None` for unlimited
+    #[inline]
     pub fn operation_timeout(&self) -> Option<Duration> {
         self.config.operation_timeout()
     }
@@ -235,6 +242,7 @@ where
     ///     .set_max_duration(Some(Duration::from_secs(30)))     // Total time max 30 seconds
     ///     .build();
     /// ```
+    #[inline]
     pub fn set_operation_timeout(mut self, timeout: Option<Duration>) -> Self {
         self.config.set_operation_timeout(timeout);
         self
@@ -253,6 +261,7 @@ where
     ///     .set_unlimited_operation_timeout()
     ///     .build();
     /// ```
+    #[inline]
     pub fn set_unlimited_operation_timeout(mut self) -> Self {
         self.config.set_unlimited_operation_timeout();
         self
@@ -261,22 +270,26 @@ where
     // --- Delay strategy methods ---
 
     /// Get delay strategy type
+    #[inline]
     pub fn delay_strategy(&self) -> RetryDelayStrategy {
         self.config.delay_strategy()
     }
 
     /// Set delay strategy type
+    #[inline]
     pub fn set_delay_strategy(mut self, delay_strategy: RetryDelayStrategy) -> Self {
         self.config.set_delay_strategy(delay_strategy);
         self
     }
 
     /// Get jitter factor
+    #[inline]
     pub fn jitter_factor(&self) -> f64 {
         self.config.jitter_factor()
     }
 
     /// Set jitter factor
+    #[inline]
     pub fn set_jitter_factor(mut self, jitter_factor: f64) -> Self {
         self.config.set_jitter_factor(jitter_factor);
         self
@@ -285,18 +298,21 @@ where
     // --- Convenience delay strategy methods ---
 
     /// Set random delay range
+    #[inline]
     pub fn set_random_delay_strategy(mut self, min_delay: Duration, max_delay: Duration) -> Self {
         self.config.set_random_delay_strategy(min_delay, max_delay);
         self
     }
 
     /// Set fixed delay
+    #[inline]
     pub fn set_fixed_delay_strategy(mut self, delay: Duration) -> Self {
         self.config.set_fixed_delay_strategy(delay);
         self
     }
 
     /// Set exponential backoff strategy parameters
+    #[inline]
     pub fn set_exponential_backoff_strategy(
         mut self,
         initial_delay: Duration,
@@ -309,12 +325,14 @@ where
     }
 
     /// Set no delay strategy
+    #[inline]
     pub fn set_no_delay_strategy(mut self) -> Self {
         self.config.set_no_delay_strategy();
         self
     }
 
     /// Set unlimited duration
+    #[inline]
     pub fn set_unlimited_duration(mut self) -> Self {
         self.config.set_unlimited_duration();
         self
@@ -326,6 +344,7 @@ where
     ///
     /// After calling this method, no errors will be treated as failure conditions, all errors will be returned directly without triggering retry.
     /// This overrides the default behavior of retrying all errors.
+    #[inline]
     pub fn no_failed_errors(mut self) -> Self {
         self.failed_error_types.clear();
         // Add a non-existent error type to override default behavior
@@ -338,6 +357,7 @@ where
     ///
     /// Calling this method is equivalent to calling `failed_on_error::<std::error::Error>()`, will retry all errors.
     /// Although this is also the default behavior, this method makes the user's intent more explicit.
+    #[inline]
     pub fn failed_on_all_errors(mut self) -> Self {
         self.failed_error_types.clear();
         self.failed_error_types.insert(TypeId::of::<dyn Error>());
@@ -352,6 +372,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all failure errors set through other `failed_on_error` methods,
     /// and then set new failure errors. **No cumulative effect.**
+    #[inline]
     pub fn failed_on_error<E: Error + 'static>(mut self) -> Self {
         self.failed_error_types.clear();
         self.failed_error_types.insert(TypeId::of::<E>());
@@ -363,6 +384,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all failure errors set through other `failed_on_error` methods,
     /// and then set new failure error list. **No cumulative effect.**
+    #[inline]
     pub fn failed_on_errors<E1: Error + 'static, E2: Error + 'static>(mut self) -> Self {
         self.failed_error_types.clear();
         self.failed_error_types.insert(TypeId::of::<E1>());
@@ -378,6 +400,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all failure results set through other `failed_on_result` methods,
     /// and then set a new single failure result. **No cumulative effect.**
+    #[inline]
     pub fn failed_on_result(mut self, result: T) -> Self {
         self.failed_results.clear();
         self.failed_results.insert(result);
@@ -389,6 +412,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all failure results set through other `failed_on_result` methods,
     /// and then set new multiple failure results. **No cumulative effect.**
+    #[inline]
     pub fn failed_on_results(mut self, results: Vec<T>) -> Self {
         self.failed_results.clear();
         self.failed_results.extend(results);
@@ -407,6 +431,7 @@ where
     ///
     /// Accepts any closure implementing `Fn(&T) -> bool`.
     /// The closure is internally converted to `BoxPredicate` for storage.
+    #[inline]
     pub fn failed_on_results_if<P>(mut self, condition: P) -> Self
     where
         P: Fn(&T) -> bool + 'static,
@@ -416,6 +441,7 @@ where
     }
 
     /// Clear all failure results
+    #[inline]
     pub fn clear_failed_results(mut self) -> Self {
         self.failed_results.clear();
         self
@@ -430,6 +456,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all abort errors set through other `abort_on_error` methods,
     /// and then set new abort errors. **No cumulative effect.**
+    #[inline]
     pub fn abort_on_error<E: Error + 'static>(mut self) -> Self {
         self.abort_error_types.clear();
         self.abort_error_types.insert(TypeId::of::<E>());
@@ -437,6 +464,7 @@ where
     }
 
     /// Set error types that need to terminate retry (multiple)
+    #[inline]
     pub fn abort_on_errors<E1: Error + 'static, E2: Error + 'static>(mut self) -> Self {
         self.abort_error_types.clear();
         self.abort_error_types.insert(TypeId::of::<E1>());
@@ -452,6 +480,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all abort errors set through other `abort_on_error` methods,
     /// and then configure to abort on all error types. **No cumulative effect.**
+    #[inline]
     pub fn abort_on_all_errors(mut self) -> Self {
         self.abort_error_types.clear();
         self.abort_error_types.insert(TypeId::of::<dyn Error>());
@@ -466,6 +495,7 @@ where
     /// **⚠️ Important: Override Semantics**
     /// This method will **clear** all abort results set through other `abort_on_result` methods,
     /// and then set a new single abort result. **No cumulative effect.**
+    #[inline]
     pub fn abort_on_result(mut self, result: T) -> Self {
         self.abort_results.clear();
         self.abort_results.insert(result);
@@ -473,6 +503,7 @@ where
     }
 
     /// Set results that need to abort retry (multiple)
+    #[inline]
     pub fn abort_on_results(mut self, results: Vec<T>) -> Self {
         self.abort_results.clear();
         self.abort_results.extend(results);
@@ -491,6 +522,7 @@ where
     ///
     /// Accepts any closure implementing `Fn(&T) -> bool`.
     /// The closure is internally converted to `BoxPredicate` for storage.
+    #[inline]
     pub fn abort_on_results_if<P>(mut self, condition: P) -> Self
     where
         P: Fn(&T) -> bool + 'static,
@@ -500,6 +532,7 @@ where
     }
 
     /// Clear all abort results
+    #[inline]
     pub fn clear_abort_results(mut self) -> Self {
         self.abort_results.clear();
         self
@@ -565,6 +598,7 @@ where
     /// Accepts any type implementing `Consumer<RetryEvent<T>>`
     /// trait, including closures. Closures automatically implement
     /// `Consumer` trait, so you can pass them directly.
+    #[inline]
     pub fn on_retry<L>(mut self, listener: L) -> Self
     where
         L: Consumer<RetryEvent<T>> + 'static,
@@ -599,6 +633,7 @@ where
     /// Accepts any type implementing `Consumer<SuccessEvent<T>>`
     /// trait, including closures. Closures automatically implement
     /// `Consumer` trait, so you can pass them directly.
+    #[inline]
     pub fn on_success<L>(mut self, listener: L) -> Self
     where
         L: Consumer<SuccessEvent<T>> + 'static,
@@ -632,6 +667,7 @@ where
     /// Accepts any type implementing `Consumer<FailureEvent<T>>`
     /// trait, including closures. Closures automatically implement
     /// `Consumer` trait, so you can pass them directly.
+    #[inline]
     pub fn on_failure<L>(mut self, listener: L) -> Self
     where
         L: Consumer<FailureEvent<T>> + 'static,
@@ -672,6 +708,7 @@ where
     /// Accepts any type implementing `Consumer<AbortEvent<T>>`
     /// trait, including closures. Closures automatically implement
     /// `Consumer` trait, so you can pass them directly.
+    #[inline]
     pub fn on_abort<L>(mut self, listener: L) -> Self
     where
         L: Consumer<AbortEvent<T>> + 'static,
@@ -697,6 +734,7 @@ where
     ///     .set_max_attempts(3)
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> super::executor::RetryExecutor<T, C> {
         super::executor::RetryExecutor::new(self)
     }
@@ -811,18 +849,22 @@ where
     }
 
     /// Get event listeners
+    #[inline]
     pub(crate) fn retry_listener(&self) -> &Option<RetryEventListener<T>> {
         &self.on_retry
     }
 
+    #[inline]
     pub(crate) fn success_listener(&self) -> &Option<SuccessEventListener<T>> {
         &self.on_success
     }
 
+    #[inline]
     pub(crate) fn failure_listener(&self) -> &Option<FailureEventListener<T>> {
         &self.on_failure
     }
 
+    #[inline]
     pub(crate) fn abort_listener(&self) -> &Option<AbortEventListener<T>> {
         &self.on_abort
     }
@@ -832,6 +874,7 @@ impl<T> Default for RetryBuilder<T, DefaultRetryConfig>
 where
     T: Clone + PartialEq + Eq + std::hash::Hash + Send + Sync + 'static,
 {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

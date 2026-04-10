@@ -33,6 +33,7 @@ pub struct DefaultRetryConfig {
 
 impl DefaultRetryConfig {
     /// Create a new `DefaultRetryConfig` instance with default configuration
+    #[inline]
     pub fn new() -> Self {
         Self {
             config: Config::new(),
@@ -40,6 +41,7 @@ impl DefaultRetryConfig {
     }
 
     /// Create a new `DefaultRetryConfig` instance with the specified configuration
+    #[inline]
     pub fn with_config(config: Config) -> Self {
         Self { config }
     }
@@ -145,36 +147,43 @@ impl DefaultRetryConfig {
 }
 
 impl Default for DefaultRetryConfig {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl Configurable for DefaultRetryConfig {
+    #[inline]
     fn config(&self) -> &Config {
         &self.config
     }
 
+    #[inline]
     fn config_mut(&mut self) -> &mut Config {
         &mut self.config
     }
 
+    #[inline]
     fn set_config(&mut self, config: Config) {
         self.config = config;
         self.on_config_changed();
     }
 
+    #[inline]
     fn on_config_changed(&mut self) {
         // Default implementation is empty, subclasses can override this method
     }
 }
 
 impl RetryConfig for DefaultRetryConfig {
+    #[inline]
     fn max_attempts(&self) -> u32 {
         self.config
             .get_or(Self::KEY_MAX_ATTEMPTS, Self::DEFAULT_MAX_ATTEMPTS)
     }
 
+    #[inline]
     fn set_max_attempts(&mut self, max_attempts: u32) -> &mut Self {
         self.config
             .set(Self::KEY_MAX_ATTEMPTS, max_attempts)
@@ -182,6 +191,7 @@ impl RetryConfig for DefaultRetryConfig {
         self
     }
 
+    #[inline]
     fn max_duration(&self) -> Option<Duration> {
         let millis = self
             .config
@@ -193,6 +203,7 @@ impl RetryConfig for DefaultRetryConfig {
         }
     }
 
+    #[inline]
     fn set_max_duration(&mut self, max_duration: Option<Duration>) -> &mut Self {
         match max_duration {
             None => self.config.set(Self::KEY_MAX_DURATION, 0u64).unwrap(),
@@ -204,6 +215,7 @@ impl RetryConfig for DefaultRetryConfig {
         self
     }
 
+    #[inline]
     fn operation_timeout(&self) -> Option<Duration> {
         let millis = self.config.get_or(
             Self::KEY_OPERATION_TIMEOUT,
@@ -216,6 +228,7 @@ impl RetryConfig for DefaultRetryConfig {
         }
     }
 
+    #[inline]
     fn set_operation_timeout(&mut self, timeout: Option<Duration>) -> &mut Self {
         match timeout {
             None => self.config.set(Self::KEY_OPERATION_TIMEOUT, 0u64).unwrap(),
@@ -227,20 +240,24 @@ impl RetryConfig for DefaultRetryConfig {
         self
     }
 
+    #[inline]
     fn delay_strategy(&self) -> RetryDelayStrategy {
         self.get_delay_strategy_from_config()
     }
 
+    #[inline]
     fn set_delay_strategy(&mut self, delay_strategy: RetryDelayStrategy) -> &mut Self {
         self.set_delay_strategy_to_config(&delay_strategy);
         self
     }
 
+    #[inline]
     fn jitter_factor(&self) -> f64 {
         self.config
             .get_or(Self::KEY_JITTER_FACTOR, Self::DEFAULT_JITTER_FACTOR)
     }
 
+    #[inline]
     fn set_jitter_factor(&mut self, jitter_factor: f64) -> &mut Self {
         self.config
             .set(Self::KEY_JITTER_FACTOR, jitter_factor)

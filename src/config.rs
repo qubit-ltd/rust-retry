@@ -157,6 +157,7 @@ pub trait RetryConfig {
     /// Set random delay range
     ///
     /// This is a convenience method that sets both the minimum and maximum values for random delay, and sets the delay strategy to random delay.
+    #[inline]
     fn set_random_delay_strategy(&mut self, min_delay: Duration, max_delay: Duration) -> &mut Self {
         self.set_delay_strategy(RetryDelayStrategy::random(min_delay, max_delay));
         self
@@ -165,6 +166,7 @@ pub trait RetryConfig {
     /// Set fixed delay
     ///
     /// This is a convenience method that sets the fixed delay time and sets the delay strategy to fixed delay.
+    #[inline]
     fn set_fixed_delay_strategy(&mut self, delay: Duration) -> &mut Self {
         self.set_delay_strategy(RetryDelayStrategy::fixed(delay));
         self
@@ -174,6 +176,7 @@ pub trait RetryConfig {
     ///
     /// This is a convenience method that sets the initial delay, maximum delay, and multiplier for exponential backoff,
     /// and sets the delay strategy to exponential backoff.
+    #[inline]
     fn set_exponential_backoff_strategy(
         &mut self,
         initial_delay: Duration,
@@ -191,6 +194,7 @@ pub trait RetryConfig {
     /// Set no delay strategy
     ///
     /// This is a convenience method that sets the delay strategy to no delay.
+    #[inline]
     fn set_no_delay_strategy(&mut self) -> &mut Self {
         self.set_delay_strategy(RetryDelayStrategy::none());
         self
@@ -200,6 +204,7 @@ pub trait RetryConfig {
     ///
     /// This is a convenience method that sets the maximum duration to None, indicating that the retry process has no time limit,
     /// and is only controlled by the maximum attempt count.
+    #[inline]
     fn set_unlimited_duration(&mut self) -> &mut Self {
         self.set_max_duration(None);
         self
@@ -208,6 +213,7 @@ pub trait RetryConfig {
     /// Set unlimited operation timeout
     ///
     /// This is a convenience method that sets the single operation timeout to None, indicating that a single operation has no time limit.
+    #[inline]
     fn set_unlimited_operation_timeout(&mut self) -> &mut Self {
         self.set_operation_timeout(None);
         self

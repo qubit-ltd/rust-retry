@@ -99,6 +99,7 @@ impl<T> RetryEvent<T> {
     ///     .total_duration(Duration::from_millis(100))
     ///     .build();
     /// ```
+    #[inline]
     pub fn builder() -> RetryEventBuilder<T> {
         RetryEventBuilder::new()
     }
@@ -124,6 +125,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 2);
     /// ```
+    #[inline]
     pub fn attempt_count(&self) -> u32 {
         self.attempt_count
     }
@@ -148,6 +150,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert_eq!(event.max_attempts(), 5);
     /// ```
+    #[inline]
     pub fn max_attempts(&self) -> u32 {
         self.max_attempts
     }
@@ -176,6 +179,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert!(event.last_error().is_some());
     /// ```
+    #[inline]
     pub fn last_error(&self) -> Option<&(dyn StdError + Send + Sync)> {
         self.last_error.as_ref().map(|e| e.as_ref())
     }
@@ -205,6 +209,7 @@ impl<T> RetryEvent<T> {
     ///     Some(&String::from("empty"))
     /// );
     /// ```
+    #[inline]
     pub fn last_result(&self) -> Option<&T> {
         self.last_result.as_ref()
     }
@@ -230,6 +235,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert_eq!(event.next_delay(), delay);
     /// ```
+    #[inline]
     pub fn next_delay(&self) -> Duration {
         self.next_delay
     }
@@ -256,6 +262,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert_eq!(event.total_duration(), total);
     /// ```
+    #[inline]
     pub fn total_duration(&self) -> Duration {
         self.total_duration
     }
@@ -289,6 +296,7 @@ impl<T> RetryEvent<T> {
     ///     .build();
     /// assert!(!event2.has_remaining_attempts());
     /// ```
+    #[inline]
     pub fn has_remaining_attempts(&self) -> bool {
         self.attempt_count < self.max_attempts
     }
@@ -380,6 +388,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEventBuilder::<i32>::new();
     /// ```
     #[allow(clippy::new_without_default)]
+    #[inline]
     pub fn new() -> Self {
         Self {
             attempt_count: 0,
@@ -409,6 +418,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::<i32>::builder()
     ///     .attempt_count(3);
     /// ```
+    #[inline]
     pub fn attempt_count(mut self, attempt_count: u32) -> Self {
         self.attempt_count = attempt_count;
         self
@@ -432,6 +442,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::<i32>::builder()
     ///     .max_attempts(5);
     /// ```
+    #[inline]
     pub fn max_attempts(mut self, max_attempts: u32) -> Self {
         self.max_attempts = max_attempts;
         self
@@ -457,6 +468,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::<i32>::builder()
     ///     .last_error(Some(Box::new(error)));
     /// ```
+    #[inline]
     pub fn last_error(mut self, last_error: Option<Box<dyn StdError + Send + Sync>>) -> Self {
         self.last_error = last_error;
         self
@@ -480,6 +492,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::builder()
     ///     .last_result(Some(String::from("empty")));
     /// ```
+    #[inline]
     pub fn last_result(mut self, last_result: Option<T>) -> Self {
         self.last_result = last_result;
         self
@@ -504,6 +517,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::<i32>::builder()
     ///     .next_delay(Duration::from_secs(2));
     /// ```
+    #[inline]
     pub fn next_delay(mut self, next_delay: Duration) -> Self {
         self.next_delay = next_delay;
         self
@@ -529,6 +543,7 @@ impl<T> RetryEventBuilder<T> {
     /// let builder = RetryEvent::<i32>::builder()
     ///     .total_duration(Duration::from_millis(500));
     /// ```
+    #[inline]
     pub fn total_duration(mut self, total_duration: Duration) -> Self {
         self.total_duration = total_duration;
         self
@@ -556,6 +571,7 @@ impl<T> RetryEventBuilder<T> {
     ///     .total_duration(Duration::from_millis(100))
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> RetryEvent<T> {
         RetryEvent {
             attempt_count: self.attempt_count,

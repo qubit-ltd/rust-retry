@@ -99,6 +99,7 @@ impl<T> FailureEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 3);
     /// ```
+    #[inline]
     pub fn builder() -> FailureEventBuilder<T> {
         FailureEventBuilder::new()
     }
@@ -125,6 +126,7 @@ impl<T> FailureEvent<T> {
     ///     .build();
     /// assert!(event.last_error().is_some());
     /// ```
+    #[inline]
     pub fn last_error(&self) -> Option<&(dyn StdError + Send + Sync)> {
         self.last_error.as_ref().map(|e| e.as_ref())
     }
@@ -152,6 +154,7 @@ impl<T> FailureEvent<T> {
     ///     Some(&String::from("Failed"))
     /// );
     /// ```
+    #[inline]
     pub fn last_result(&self) -> Option<&T> {
         self.last_result.as_ref()
     }
@@ -174,6 +177,7 @@ impl<T> FailureEvent<T> {
     ///     .build();
     /// assert_eq!(event.attempt_count(), 5);
     /// ```
+    #[inline]
     pub fn attempt_count(&self) -> u32 {
         self.attempt_count
     }
@@ -197,6 +201,7 @@ impl<T> FailureEvent<T> {
     ///     .build();
     /// assert_eq!(event.total_duration(), duration);
     /// ```
+    #[inline]
     pub fn total_duration(&self) -> Duration {
         self.total_duration
     }
@@ -281,6 +286,7 @@ impl<T> FailureEventBuilder<T> {
     /// let builder = FailureEventBuilder::<i32>::new();
     /// ```
     #[allow(clippy::new_without_default)]
+    #[inline]
     pub fn new() -> Self {
         Self {
             last_error: None,
@@ -310,6 +316,7 @@ impl<T> FailureEventBuilder<T> {
     /// let builder = FailureEvent::<i32>::builder()
     ///     .last_error(Some(Box::new(error)));
     /// ```
+    #[inline]
     pub fn last_error(mut self, last_error: Option<Box<dyn StdError + Send + Sync>>) -> Self {
         self.last_error = last_error;
         self
@@ -333,6 +340,7 @@ impl<T> FailureEventBuilder<T> {
     /// let builder = FailureEvent::builder()
     ///     .last_result(Some(String::from("Failed")));
     /// ```
+    #[inline]
     pub fn last_result(mut self, last_result: Option<T>) -> Self {
         self.last_result = last_result;
         self
@@ -356,6 +364,7 @@ impl<T> FailureEventBuilder<T> {
     /// let builder = FailureEvent::<i32>::builder()
     ///     .attempt_count(5);
     /// ```
+    #[inline]
     pub fn attempt_count(mut self, attempt_count: u32) -> Self {
         self.attempt_count = attempt_count;
         self
@@ -380,6 +389,7 @@ impl<T> FailureEventBuilder<T> {
     /// let builder = FailureEvent::<i32>::builder()
     ///     .total_duration(Duration::from_secs(10));
     /// ```
+    #[inline]
     pub fn total_duration(mut self, total_duration: Duration) -> Self {
         self.total_duration = total_duration;
         self
@@ -405,6 +415,7 @@ impl<T> FailureEventBuilder<T> {
     ///     .total_duration(Duration::from_secs(5))
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> FailureEvent<T> {
         FailureEvent {
             last_error: self.last_error,
