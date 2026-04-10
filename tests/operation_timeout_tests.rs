@@ -14,6 +14,7 @@
 //!
 //! Haixing Hu
 
+use qubit_config::Config;
 use qubit_retry::{RetryBuilder, RetryError};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -275,7 +276,6 @@ async fn test_async_max_duration_vs_operation_timeout() {
 #[test]
 fn test_operation_timeout_config_from_file() {
     // Test loading operation_timeout from config file
-    use qubit_config::Config;
     use qubit_retry::DefaultRetryConfig;
 
     let mut config = Config::new();
