@@ -29,8 +29,8 @@ mod retry_options;
 pub use delay::Delay;
 pub use error::{AttemptFailure, ErrorClassifier, RetryConfigError, RetryError};
 pub use events::{
-    AbortEvent, AbortListener, AttemptContext, FailureEvent, FailureListener, RetryDecision,
-    RetryEvent, RetryListener, SuccessEvent, SuccessListener,
+    AbortContext, AbortListener, AttemptContext, FailureContext, FailureListener, RetryContext,
+    RetryDecision, RetryListener, SuccessEvent, SuccessListener,
 };
 pub use jitter::Jitter;
 pub use retry_executor::RetryExecutor;

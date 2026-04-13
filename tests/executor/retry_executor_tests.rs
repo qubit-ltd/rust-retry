@@ -109,8 +109,8 @@ fn test_run_retries_until_success_and_emits_retry_events() {
     let executor = RetryExecutor::<TestError>::builder()
         .max_attempts(4)
         .delay(Delay::none())
-        .on_retry(move |event| {
-            if let AttemptFailure::Error(error) = event.failure {
+        .on_retry(move |event, failure| {
+            if let AttemptFailure::Error(error) = failure {
                 retry_events_for_listener
                     .lock()
                     .expect("retry event list should be lockable")
@@ -161,12 +161,9 @@ fn test_retry_if_can_abort_and_preserve_original_error() {
         .max_attempts(3)
         .delay(Delay::none())
         .retry_if(|error: &TestError, _: &AttemptContext| error.0 == "retry")
-        .on_abort(move |event| {
+        .on_abort(move |event, failure| {
             assert_eq!(event.attempts, 1);
-            assert!(matches!(
-                event.failure,
-                AttemptFailure::Error(TestError("fatal"))
-            ));
+            assert!(matches!(failure, AttemptFailure::Error(TestError("fatal"))));
             abort_events_for_listener.fetch_add(1, Ordering::SeqCst);
         })
         .build()
@@ -236,8 +233,8 @@ fn test_attempts_exceeded_emits_failure_event_and_preserves_last_error() {
     let executor = RetryExecutor::<TestError>::builder()
         .max_attempts(2)
         .delay(Delay::none())
-        .on_failure(move |event| {
-            let failure = match event.failure {
+        .on_failure(move |event, failure| {
+            let failure = match failure {
                 Some(AttemptFailure::Error(error)) => error.0,
                 _ => "missing",
             };
@@ -294,11 +291,11 @@ fn test_max_elapsed_can_stop_before_first_attempt() {
     let failures_for_listener = Arc::clone(&failures);
     let executor = RetryExecutor::<TestError>::builder()
         .max_elapsed(Some(Duration::ZERO))
-        .on_failure(move |event| {
+        .on_failure(move |event, failure| {
             failures_for_listener
                 .lock()
                 .expect("failure event list should be lockable")
-                .push((event.attempts, event.failure.is_none()));
+                .push((event.attempts, failure.is_none()));
         })
         .build()
         .expect("executor should be built");
@@ -342,7 +339,7 @@ fn test_max_elapsed_stops_when_retry_sleep_would_exceed_budget() {
         .max_attempts(3)
         .max_elapsed(Some(Duration::from_millis(1)))
         .delay(Delay::fixed(Duration::from_millis(10)))
-        .on_retry(move |_| {
+        .on_retry(move |_, _| {
             retry_events_for_listener.fetch_add(1, Ordering::SeqCst);
         })
         .build()
@@ -384,7 +381,7 @@ fn test_max_elapsed_allows_retry_sleep_within_budget() {
         .max_attempts(2)
         .max_elapsed(Some(Duration::from_millis(100)))
         .delay(Delay::fixed(Duration::from_millis(1)))
-        .on_retry(move |_| {
+        .on_retry(move |_, _| {
             retry_events_for_listener.fetch_add(1, Ordering::SeqCst);
         })
         .build()
@@ -581,8 +578,8 @@ async fn test_run_async_with_timeout_can_retry_and_succeed() {
     let executor = RetryExecutor::<TestError>::builder()
         .max_attempts(2)
         .delay(Delay::fixed(Duration::from_millis(1)))
-        .on_retry(move |event| {
-            if matches!(event.failure, AttemptFailure::AttemptTimeout { .. }) {
+        .on_retry(move |_, failure| {
+            if matches!(failure, AttemptFailure::AttemptTimeout { .. }) {
                 retry_timeouts_for_listener.fetch_add(1, Ordering::SeqCst);
             }
         })

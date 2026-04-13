@@ -6,22 +6,22 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Retry event types and listener aliases.
+//! Retry context types and listener aliases.
 
-mod abort_event;
+mod abort_context;
 mod attempt_context;
-mod failure_event;
+mod failure_context;
 mod listeners;
+mod retry_context;
 mod retry_decision;
-mod retry_event;
 mod success_event;
 
-pub use abort_event::AbortEvent;
+pub use abort_context::AbortContext;
 pub use attempt_context::AttemptContext;
-pub use failure_event::FailureEvent;
+pub use failure_context::FailureContext;
 pub use listeners::{AbortListener, FailureListener, RetryListener, SuccessListener};
+pub use retry_context::RetryContext;
 pub use retry_decision::RetryDecision;
-pub use retry_event::RetryEvent;
 pub use success_event::SuccessEvent;
 
 pub(crate) use listeners::RetryListeners;

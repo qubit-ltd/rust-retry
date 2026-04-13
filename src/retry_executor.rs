@@ -17,12 +17,12 @@ use std::future::Future;
 use std::time::{Duration, Instant};
 
 use qubit_common::BoxError;
-use qubit_function::{BiFunction, Consumer};
+use qubit_function::{BiConsumer, BiFunction, Consumer};
 
 use crate::events::RetryListeners;
 use crate::{
-    AbortEvent, AttemptContext, AttemptFailure, FailureEvent, RetryConfigError, RetryDecision,
-    RetryError, RetryEvent, RetryOptions, SuccessEvent,
+    AbortContext, AttemptContext, AttemptFailure, FailureContext, RetryConfigError, RetryContext,
+    RetryDecision, RetryError, RetryOptions, SuccessEvent,
 };
 
 use crate::error::ErrorClassifier;
@@ -415,7 +415,9 @@ impl<E> RetryExecutor<E> {
         // `max_attempts` means no further attempts remain.
         let max_attempts = self.options.max_attempts.get();
         if attempts >= max_attempts {
-            self.emit_failure(attempts, elapsed, Some(&failure));
+            let Some(failure) = self.emit_failure(attempts, elapsed, Some(failure)) else {
+                unreachable!("failure must exist when attempts exceed max_attempts");
+            };
             return FailureAction::Finished(RetryError::AttemptsExceeded {
                 attempts,
                 max_attempts,
@@ -430,12 +432,12 @@ impl<E> RetryExecutor<E> {
         // instead of sleeping once and failing on the next loop iteration.
         if let Some(max_elapsed) = self.options.max_elapsed {
             if will_exceed_elapsed(start.elapsed(), delay, max_elapsed) {
-                self.emit_failure(attempts, elapsed, Some(&failure));
+                let last_failure = self.emit_failure(attempts, elapsed, Some(failure));
                 let error = RetryError::MaxElapsedExceeded {
                     attempts,
                     elapsed,
                     max_elapsed,
-                    last_failure: Some(failure),
+                    last_failure,
                 };
                 return FailureAction::Finished(error);
             }
@@ -478,8 +480,7 @@ impl<E> RetryExecutor<E> {
         }
         // Budget already consumed: do not start another attempt; attach the
         // last failure if we have one from the previous attempt.
-        let last_failure = last_failure.take();
-        self.emit_failure(attempts, elapsed, last_failure.as_ref());
+        let last_failure = self.emit_failure(attempts, elapsed, last_failure.take());
         Some(RetryError::MaxElapsedExceeded {
             attempts,
             elapsed,
@@ -512,13 +513,15 @@ impl<E> RetryExecutor<E> {
         failure: &AttemptFailure<E>,
     ) {
         if let Some(listener) = &self.listeners.retry {
-            listener(&RetryEvent {
-                attempt,
-                max_attempts: self.options.max_attempts.get(),
-                elapsed,
-                next_delay,
+            listener.accept(
+                &RetryContext {
+                    attempt,
+                    max_attempts: self.options.max_attempts.get(),
+                    elapsed,
+                    next_delay,
+                },
                 failure,
-            });
+            );
         }
     }
 
@@ -557,14 +560,16 @@ impl<E> RetryExecutor<E> {
     ///
     /// # Panics
     /// Propagates any panic raised by the listener.
-    fn emit_failure(&self, attempts: u32, elapsed: Duration, failure: Option<&AttemptFailure<E>>) {
+    fn emit_failure(
+        &self,
+        attempts: u32,
+        elapsed: Duration,
+        failure: Option<AttemptFailure<E>>,
+    ) -> Option<AttemptFailure<E>> {
         if let Some(listener) = &self.listeners.failure {
-            listener(&FailureEvent {
-                attempts,
-                elapsed,
-                failure,
-            });
+            listener.accept(&FailureContext { attempts, elapsed }, &failure);
         }
+        failure
     }
 
     /// Emits the abort listener event when a listener is registered.
@@ -584,11 +589,7 @@ impl<E> RetryExecutor<E> {
     /// Propagates any panic raised by the listener.
     fn emit_abort(&self, attempts: u32, elapsed: Duration, failure: &AttemptFailure<E>) {
         if let Some(listener) = &self.listeners.abort {
-            listener(&AbortEvent {
-                attempts,
-                elapsed,
-                failure,
-            });
+            listener.accept(&AbortContext { attempts, elapsed }, failure);
         }
     }
 }

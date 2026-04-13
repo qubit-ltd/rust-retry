@@ -11,16 +11,16 @@
 //! The builder collects options, an error classifier, and listeners before
 //! producing a validated [`RetryExecutor`].
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use qubit_common::BoxError;
-use qubit_function::{ArcBiFunction, ArcConsumer, BiPredicate};
+use qubit_function::{ArcBiFunction, BiPredicate};
 
 use crate::events::RetryListeners;
 use crate::{
-    AbortEvent, AttemptContext, Delay, FailureEvent, Jitter, RetryConfigError, RetryDecision,
-    RetryEvent, RetryOptions, SuccessEvent,
+    AbortContext, AbortListener, AttemptContext, AttemptFailure, Delay, FailureContext,
+    FailureListener, Jitter, RetryConfigError, RetryContext, RetryDecision, RetryListener,
+    RetryOptions, SuccessEvent, SuccessListener,
 };
 
 use crate::error::ErrorClassifier;
@@ -225,8 +225,8 @@ impl<E> RetryExecutorBuilder<E> {
     /// Registers a listener invoked before retry sleep.
     ///
     /// # Parameters
-    /// - `listener`: Callback invoked with a [`RetryEvent`] after a failed
-    ///   attempt and before sleeping.
+    /// - `listener`: Callback invoked with [`RetryContext`] plus the triggering
+    ///   [`AttemptFailure`] after a failed attempt and before sleeping.
     ///
     /// # Returns
     /// The updated builder.
@@ -238,9 +238,9 @@ impl<E> RetryExecutorBuilder<E> {
     /// The built executor propagates any panic raised by `listener`.
     pub fn on_retry<F>(mut self, listener: F) -> Self
     where
-        F: for<'a> Fn(&RetryEvent<'a, E>) + Send + Sync + 'static,
+        F: Fn(&RetryContext, &AttemptFailure<E>) + Send + Sync + 'static,
     {
-        self.listeners.retry = Some(Arc::new(listener));
+        self.listeners.retry = Some(RetryListener::new(listener));
         self
     }
 
@@ -262,15 +262,15 @@ impl<E> RetryExecutorBuilder<E> {
     where
         F: Fn(&SuccessEvent) + Send + Sync + 'static,
     {
-        self.listeners.success = Some(ArcConsumer::new(listener));
+        self.listeners.success = Some(SuccessListener::new(listener));
         self
     }
 
     /// Registers a listener invoked when retry limits are exhausted.
     ///
     /// # Parameters
-    /// - `listener`: Callback invoked with a [`FailureEvent`] when retry limits
-    ///   stop execution.
+    /// - `listener`: Callback invoked with [`FailureContext`] metadata plus
+    ///   `Option<AttemptFailure<E>>` when retry limits stop execution.
     ///
     /// # Returns
     /// The updated builder.
@@ -282,17 +282,17 @@ impl<E> RetryExecutorBuilder<E> {
     /// The built executor propagates any panic raised by `listener`.
     pub fn on_failure<F>(mut self, listener: F) -> Self
     where
-        F: for<'a> Fn(&FailureEvent<'a, E>) + Send + Sync + 'static,
+        F: Fn(&FailureContext, &Option<AttemptFailure<E>>) + Send + Sync + 'static,
     {
-        self.listeners.failure = Some(Arc::new(listener));
+        self.listeners.failure = Some(FailureListener::new(listener));
         self
     }
 
     /// Registers a listener invoked when the classifier aborts retrying.
     ///
     /// # Parameters
-    /// - `listener`: Callback invoked with an [`AbortEvent`] when the
-    ///   classifier aborts retrying.
+    /// - `listener`: Callback invoked with [`AbortContext`] metadata plus the
+    ///   failure when the classifier aborts retrying.
     ///
     /// # Returns
     /// The updated builder.
@@ -304,9 +304,9 @@ impl<E> RetryExecutorBuilder<E> {
     /// The built executor propagates any panic raised by `listener`.
     pub fn on_abort<F>(mut self, listener: F) -> Self
     where
-        F: for<'a> Fn(&AbortEvent<'a, E>) + Send + Sync + 'static,
+        F: Fn(&AbortContext, &AttemptFailure<E>) + Send + Sync + 'static,
     {
-        self.listeners.abort = Some(Arc::new(listener));
+        self.listeners.abort = Some(AbortListener::new(listener));
         self
     }
 

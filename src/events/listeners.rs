@@ -8,45 +8,44 @@
  ******************************************************************************/
 //! Retry listener type aliases.
 //!
-//! Listener callbacks are shared with [`Arc`] so cloned executors invoke the
-//! same callback set.
+//! Listener callbacks are shared through `rs-function` functors so cloned
+//! executors invoke the same callback set and can compose listeners with
+//! function combinators.
 
-use std::sync::Arc;
+use qubit_function::{ArcBiConsumer, ArcConsumer};
 
-use qubit_function::ArcConsumer;
+use crate::AttemptFailure;
 
-use super::{AbortEvent, FailureEvent, RetryEvent, SuccessEvent};
+use super::{AbortContext, FailureContext, RetryContext, SuccessEvent};
 
 /// Listener invoked before sleeping for a retry.
 ///
-/// The callback receives a borrowed [`RetryEvent`] and must be safe to share
-/// across threads because executors are cloneable.
-pub type RetryListener<E> = Arc<dyn for<'a> Fn(&RetryEvent<'a, E>) + Send + Sync + 'static>;
+/// The callback receives retry metadata and the triggering failure separately.
+pub type RetryListener<E> = ArcBiConsumer<RetryContext, AttemptFailure<E>>;
 
 /// Listener invoked when the operation eventually succeeds.
 ///
 /// The callback receives a borrowed [`SuccessEvent`] and is invoked exactly
 /// once for a successful executor execution.
-pub type SuccessListener = Arc<dyn Fn(&SuccessEvent) + Send + Sync + 'static>;
+pub type SuccessListener = ArcConsumer<SuccessEvent>;
 
 /// Listener invoked when retry limits are exhausted.
 ///
-/// The callback receives a borrowed [`FailureEvent`] when attempts or elapsed
-/// budget stops retrying.
-pub type FailureListener<E> = Arc<dyn for<'a> Fn(&FailureEvent<'a, E>) + Send + Sync + 'static>;
+/// The callback receives failure metadata plus an optional final failure
+/// payload (`None` means stopped before the first attempt).
+pub type FailureListener<E> = ArcBiConsumer<FailureContext, Option<AttemptFailure<E>>>;
 
 /// Listener invoked when the classifier aborts retrying.
 ///
-/// The callback receives a borrowed [`AbortEvent`] when the classifier returns
-/// [`crate::RetryDecision::Abort`].
-pub type AbortListener<E> = Arc<dyn for<'a> Fn(&AbortEvent<'a, E>) + Send + Sync + 'static>;
+/// The callback receives abort metadata and the triggering failure separately.
+pub type AbortListener<E> = ArcBiConsumer<AbortContext, AttemptFailure<E>>;
 
 #[derive(Clone)]
 pub(crate) struct RetryListeners<E> {
     /// Optional callback invoked before sleeping for a retry.
     pub(crate) retry: Option<RetryListener<E>>,
     /// Optional callback invoked when the operation eventually succeeds.
-    pub(crate) success: Option<ArcConsumer<SuccessEvent>>,
+    pub(crate) success: Option<SuccessListener>,
     /// Optional callback invoked when retry limits are exhausted.
     pub(crate) failure: Option<FailureListener<E>>,
     /// Optional callback invoked when the classifier aborts retrying.
