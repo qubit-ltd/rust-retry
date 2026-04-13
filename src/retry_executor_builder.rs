@@ -20,7 +20,7 @@ use crate::events::RetryListeners;
 use crate::{
     AbortContext, AbortListener, AttemptContext, AttemptFailure, Delay, FailureContext,
     FailureListener, Jitter, RetryConfigError, RetryContext, RetryDecision, RetryListener,
-    RetryOptions, SuccessEvent, SuccessListener,
+    RetryOptions, SuccessContext, SuccessListener,
 };
 
 use crate::error::ErrorClassifier;
@@ -247,7 +247,7 @@ impl<E> RetryExecutorBuilder<E> {
     /// Registers a listener invoked when the operation succeeds.
     ///
     /// # Parameters
-    /// - `listener`: Callback invoked with a [`SuccessEvent`] when the
+    /// - `listener`: Callback invoked with a [`SuccessContext`] when the
     ///   operation eventually succeeds.
     ///
     /// # Returns
@@ -260,7 +260,7 @@ impl<E> RetryExecutorBuilder<E> {
     /// The built executor propagates any panic raised by `listener`.
     pub fn on_success<F>(mut self, listener: F) -> Self
     where
-        F: Fn(&SuccessEvent) + Send + Sync + 'static,
+        F: Fn(&SuccessContext) + Send + Sync + 'static,
     {
         self.listeners.success = Some(SuccessListener::new(listener));
         self

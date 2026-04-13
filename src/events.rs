@@ -14,7 +14,7 @@ mod failure_context;
 mod listeners;
 mod retry_context;
 mod retry_decision;
-mod success_event;
+mod success_context;
 
 pub use abort_context::AbortContext;
 pub use attempt_context::AttemptContext;
@@ -22,6 +22,6 @@ pub use failure_context::FailureContext;
 pub use listeners::{AbortListener, FailureListener, RetryListener, SuccessListener};
 pub use retry_context::RetryContext;
 pub use retry_decision::RetryDecision;
-pub use success_event::SuccessEvent;
+pub use success_context::SuccessContext;
 
 pub(crate) use listeners::RetryListeners;

@@ -16,7 +16,7 @@ use qubit_function::{ArcBiConsumer, ArcConsumer};
 
 use crate::AttemptFailure;
 
-use super::{AbortContext, FailureContext, RetryContext, SuccessEvent};
+use super::{AbortContext, FailureContext, RetryContext, SuccessContext};
 
 /// Listener invoked before sleeping for a retry.
 ///
@@ -25,9 +25,9 @@ pub type RetryListener<E> = ArcBiConsumer<RetryContext, AttemptFailure<E>>;
 
 /// Listener invoked when the operation eventually succeeds.
 ///
-/// The callback receives a borrowed [`SuccessEvent`] and is invoked exactly
+/// The callback receives a borrowed [`SuccessContext`] and is invoked exactly
 /// once for a successful executor execution.
-pub type SuccessListener = ArcConsumer<SuccessEvent>;
+pub type SuccessListener = ArcConsumer<SuccessContext>;
 
 /// Listener invoked when retry limits are exhausted.
 ///

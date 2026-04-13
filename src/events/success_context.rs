@@ -6,19 +6,19 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Success event payload.
+//! Success context payload.
 //!
-//! Success events are emitted once a retry executor receives an `Ok` result from
+//! Success contexts are emitted once a retry executor receives an `Ok` result from
 //! the operation.
 
 use std::time::Duration;
 
-/// Event emitted when an operation succeeds.
+/// Context emitted when an operation succeeds.
 ///
-/// The event contains execution metadata only; it does not borrow or clone the
+/// The context contains execution metadata only; it does not borrow or clone the
 /// successful result value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SuccessEvent {
+pub struct SuccessContext {
     /// Number of attempts that were executed.
     pub attempts: u32,
     /// Total elapsed time observed by the retry executor.

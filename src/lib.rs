@@ -30,7 +30,7 @@ pub use delay::Delay;
 pub use error::{AttemptFailure, ErrorClassifier, RetryConfigError, RetryError};
 pub use events::{
     AbortContext, AbortListener, AttemptContext, FailureContext, FailureListener, RetryContext,
-    RetryDecision, RetryListener, SuccessEvent, SuccessListener,
+    RetryDecision, RetryListener, SuccessContext, SuccessListener,
 };
 pub use jitter::Jitter;
 pub use retry_executor::RetryExecutor;

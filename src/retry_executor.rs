@@ -22,7 +22,7 @@ use qubit_function::{BiConsumer, BiFunction, Consumer};
 use crate::events::RetryListeners;
 use crate::{
     AbortContext, AttemptContext, AttemptFailure, FailureContext, RetryConfigError, RetryContext,
-    RetryDecision, RetryError, RetryOptions, SuccessEvent,
+    RetryDecision, RetryError, RetryOptions, SuccessContext,
 };
 
 use crate::error::ErrorClassifier;
@@ -541,7 +541,7 @@ impl<E> RetryExecutor<E> {
     /// Propagates any panic raised by the listener.
     fn emit_success(&self, attempts: u32, elapsed: Duration) {
         if let Some(listener) = &self.listeners.success {
-            listener.accept(&SuccessEvent { attempts, elapsed });
+            listener.accept(&SuccessContext { attempts, elapsed });
         }
     }
 
