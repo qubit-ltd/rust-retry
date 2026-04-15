@@ -72,7 +72,7 @@ fn test_default_and_debug_work() {
     assert!(format!("{executor:?}").contains("RetryExecutor"));
 }
 
-/// Verifies default-classifier construction supports non-static error inputs.
+/// Verifies default decider construction supports non-static error inputs.
 ///
 /// # Parameters
 /// This test has no parameters.

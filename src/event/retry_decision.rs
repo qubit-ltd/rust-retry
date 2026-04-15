@@ -6,12 +6,12 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Retry classifier decisions.
+//! Retry decisions returned by a [`crate::RetryDecider`].
 //!
-//! A classifier returns one of these values after inspecting an application
-//! error and attempt context.
+//! A decider returns one of these values after inspecting an application error
+//! and attempt context.
 
-/// Error classifier decision.
+/// Decision returned by a [`crate::RetryDecider`] after inspecting an error.
 ///
 /// The decision is advisory for retrying: [`RetryDecision::Retry`] still obeys
 /// attempt and elapsed-time limits.

@@ -182,7 +182,7 @@ fn test_retry_if_can_abort_and_preserve_original_error() {
     assert_eq!(error.into_last_error(), Some(TestError("fatal")));
 }
 
-/// Verifies classifiers can inspect attempt context before deciding.
+/// Verifies retry deciders can inspect attempt context before deciding.
 ///
 /// # Parameters
 /// This test has no parameters.
@@ -211,7 +211,7 @@ fn test_retry_decide_can_use_attempt_context() {
 
     let error = executor
         .run(|| -> Result<(), TestError> { Err(TestError("still-bad")) })
-        .expect_err("classifier should abort on second attempt");
+        .expect_err("decider should abort on second attempt");
 
     assert!(matches!(error, RetryError::Aborted { attempts: 2, .. }));
 }

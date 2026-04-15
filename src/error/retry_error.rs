@@ -25,7 +25,8 @@ use super::RetryAttemptFailure;
 /// from the user operation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RetryError<E> {
-    /// The configured classifier marked the last failure as non-retryable.
+    /// The configured [`crate::RetryDecider`] returned [`crate::RetryDecision::Abort`]
+    /// for the last application error.
     Aborted {
         /// Number of attempts that were executed.
         attempts: u32,

@@ -8,4 +8,5 @@
  ******************************************************************************/
 
 mod retry_config_error_tests;
+mod retry_decider_tests;
 mod retry_error_tests;

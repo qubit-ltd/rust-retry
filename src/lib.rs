@@ -23,7 +23,7 @@ pub mod options;
 mod retry_executor;
 mod retry_executor_builder;
 
-pub use error::{RetryAttemptFailure, RetryConfigError, RetryError, RetryErrorClassifier};
+pub use error::{RetryAttemptFailure, RetryConfigError, RetryDecider, RetryError};
 pub use event::{
     RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryContext, RetryDecision,
     RetryFailureContext, RetryFailureListener, RetryListener, RetrySuccessContext,

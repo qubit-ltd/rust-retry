@@ -6,16 +6,16 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! Attempt context passed to classifiers.
+//! Attempt context passed to [`crate::RetryDecider`].
 //!
-//! The context carries executor state that helps a classifier decide whether an
+//! The context carries executor state that helps a decider choose whether an
 //! application error should be retried.
 
 use std::time::Duration;
 
-/// Context visible to error classifiers.
+/// Context visible to [`crate::RetryDecider`].
 ///
-/// Values are snapshots taken before the classifier is invoked for a failed
+/// Values are snapshots taken before the decider is invoked for a failed
 /// attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RetryAttemptContext {
@@ -23,6 +23,6 @@ pub struct RetryAttemptContext {
     pub attempt: u32,
     /// Configured maximum attempts.
     pub max_attempts: u32,
-    /// Elapsed time observed before the classifier is invoked.
+    /// Elapsed time observed before the decider is invoked.
     pub elapsed: Duration,
 }

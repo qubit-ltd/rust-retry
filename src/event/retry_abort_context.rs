@@ -8,12 +8,12 @@
  ******************************************************************************/
 //! Abort context payload.
 //!
-//! Abort contexts are emitted when the error classifier chooses not to retry an
+//! Abort contexts are emitted when the retry decider chooses not to retry an
 //! application error.
 
 use std::time::Duration;
 
-/// Context emitted when the classifier aborts the operation.
+/// Context emitted when the retry decider aborts the operation.
 ///
 /// Carries abort metadata while the triggering failure is passed separately to
 /// abort listeners.

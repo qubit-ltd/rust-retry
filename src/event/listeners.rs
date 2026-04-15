@@ -36,7 +36,7 @@ pub type RetrySuccessListener = ArcConsumer<RetrySuccessContext>;
 pub type RetryFailureListener<E> =
     ArcBiConsumer<RetryFailureContext, Option<RetryAttemptFailure<E>>>;
 
-/// Listener invoked when the classifier aborts retrying.
+/// Listener invoked when the retry decider aborts retrying.
 ///
 /// The callback receives abort metadata and the triggering failure separately.
 pub type RetryAbortListener<E> = ArcBiConsumer<RetryAbortContext, RetryAttemptFailure<E>>;
@@ -49,7 +49,7 @@ pub(crate) struct RetryListeners<E> {
     pub(crate) success: Option<RetrySuccessListener>,
     /// Optional callback invoked when retry limits are exhausted.
     pub(crate) failure: Option<RetryFailureListener<E>>,
-    /// Optional callback invoked when the classifier aborts retrying.
+    /// Optional callback invoked when the retry decider aborts retrying.
     pub(crate) abort: Option<RetryAbortListener<E>>,
 }
 

@@ -8,7 +8,7 @@
  ******************************************************************************/
 //! Retry executor builder.
 //!
-//! The builder collects options, an error classifier, and listeners before
+//! The builder collects options, a retry decider, and listeners before
 //! producing a validated [`RetryExecutor`].
 
 use std::time::Duration;
@@ -24,19 +24,19 @@ use crate::{
     RetrySuccessListener,
 };
 
-use crate::error::RetryErrorClassifier;
+use crate::error::RetryDecider;
 use crate::retry_executor::RetryExecutor;
 
 /// Builder for [`RetryExecutor`].
 ///
 /// The generic parameter `E` is the application error type that the resulting
-/// executor will classify. If no classifier is provided, the built executor retries
+/// executor will pass errors to. If no decider is provided, the built executor retries
 /// every application error until limits stop execution.
 pub struct RetryExecutorBuilder<E = BoxError> {
     /// Retry limits, delays, jitter, and other tunables accumulated by the builder.
     options: RetryOptions,
-    /// Optional classifier; when absent, every application error is treated as retryable.
-    classifier: Option<RetryErrorClassifier<E>>,
+    /// Optional [`RetryDecider`]; when absent, every application error is treated as retryable.
+    retry_decider: Option<RetryDecider<E>>,
     /// Hooks invoked on success, failure, abort, and each retry attempt.
     listeners: RetryListeners<E>,
     /// Set when `max_attempts` was configured as zero; surfaced from [`Self::build`].
@@ -44,7 +44,7 @@ pub struct RetryExecutorBuilder<E = BoxError> {
 }
 
 impl<E> RetryExecutorBuilder<E> {
-    /// Creates a builder with default options and a retry-all classifier.
+    /// Creates a builder with default options and a retry-all decider.
     ///
     /// # Parameters
     /// This function has no parameters.
@@ -55,7 +55,7 @@ impl<E> RetryExecutorBuilder<E> {
     pub fn new() -> Self {
         Self {
             options: RetryOptions::default(),
-            classifier: None,
+            retry_decider: None,
             listeners: RetryListeners::default(),
             max_attempts_error: None,
         }
@@ -191,7 +191,7 @@ impl<E> RetryExecutorBuilder<E> {
     where
         P: BiPredicate<E, RetryAttemptContext> + Send + Sync + 'static,
     {
-        self.classifier = Some(ArcBiFunction::new(move |error, context| {
+        self.retry_decider = Some(ArcBiFunction::new(move |error, context| {
             if retry_tester.test(error, context) {
                 RetryDecision::Retry
             } else {
@@ -224,7 +224,7 @@ impl<E> RetryExecutorBuilder<E> {
     where
         B: BiFunction<E, RetryAttemptContext, RetryDecision> + Send + Sync + 'static,
     {
-        self.classifier = Some(decider.into_arc());
+        self.retry_decider = Some(decider.into_arc());
         self
     }
 
@@ -294,11 +294,11 @@ impl<E> RetryExecutorBuilder<E> {
         self
     }
 
-    /// Registers a listener invoked when the classifier aborts retrying.
+    /// Registers a listener invoked when the retry decider aborts retrying.
     ///
     /// # Parameters
     /// - `listener`: Callback invoked with [`RetryAbortContext`] metadata plus the
-    ///   failure when the classifier aborts retrying.
+    ///   failure when the retry decider aborts retrying.
     ///
     /// # Returns
     /// The updated builder.
@@ -332,11 +332,15 @@ impl<E> RetryExecutorBuilder<E> {
             return Err(error);
         }
         self.options.validate()?;
-        // If no classifier is provided, treat all errors as retryable.
-        let classifier = self
-            .classifier
+        // If no decider is provided, treat all errors as retryable.
+        let retry_decider = self
+            .retry_decider
             .unwrap_or_else(|| ArcBiFunction::constant(RetryDecision::Retry));
-        Ok(RetryExecutor::new(self.options, classifier, self.listeners))
+        Ok(RetryExecutor::new(
+            self.options,
+            retry_decider,
+            self.listeners,
+        ))
     }
 }
 

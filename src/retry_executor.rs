@@ -8,7 +8,7 @@
  ******************************************************************************/
 //! Retry executor execution.
 //!
-//! A [`RetryExecutor`] owns validated retry options, an error classifier, and
+//! A [`RetryExecutor`] owns validated retry options, a retry decider, and
 //! optional listeners. It can execute synchronous operations or asynchronous
 //! operations on Tokio.
 
@@ -25,7 +25,7 @@ use crate::{
     RetryDecision, RetryError, RetryFailureContext, RetryOptions, RetrySuccessContext,
 };
 
-use crate::error::RetryErrorClassifier;
+use crate::error::RetryDecider;
 use crate::error::RetryFailureAction;
 use crate::retry_executor_builder::RetryExecutorBuilder;
 
@@ -34,19 +34,19 @@ use crate::retry_executor_builder::RetryExecutorBuilder;
 /// The generic parameter `E` is the caller's application error type. The
 /// success type is chosen per call to [`RetryExecutor::run`],
 /// [`RetryExecutor::run_async`], or [`RetryExecutor::run_async_with_timeout`].
-/// Cloning an executor shares the classifier and listeners through reference
+/// Cloning an executor shares the retry decider and listeners through reference
 /// counting.
 #[derive(Clone)]
 pub struct RetryExecutor<E = BoxError> {
     /// Validated limits and backoff settings (`max_attempts`, delay strategy,
     /// jitter, optional `max_elapsed`).
     options: RetryOptions,
-    /// Classifies application errors after each failed attempt; timeouts from
-    /// [`RetryAttemptFailure::AttemptTimeout`] bypass the classifier and are treated as
+    /// Decides whether to retry after each application error; timeouts from
+    /// [`RetryAttemptFailure::AttemptTimeout`] bypass the retry decider and are treated as
     /// retryable unless executor limits stop execution.
-    classifier: RetryErrorClassifier<E>,
+    retry_decider: RetryDecider<E>,
     /// Optional hooks invoked on success, retry scheduling, terminal failure,
-    /// or classifier abort.
+    /// or decider-initiated abort.
     listeners: RetryListeners<E>,
 }
 
@@ -58,7 +58,7 @@ impl<E> RetryExecutor<E> {
     ///
     /// # Returns
     /// A [`RetryExecutorBuilder`] configured with default options and the default
-    /// retry-all classifier.
+    /// retry-all decider.
     ///
     /// # Errors
     /// This function does not return errors.
@@ -67,7 +67,7 @@ impl<E> RetryExecutor<E> {
         RetryExecutorBuilder::new()
     }
 
-    /// Creates an executor from options with the default classifier.
+    /// Creates an executor from options with the default decider.
     ///
     /// # Parameters
     /// - `options`: Validated retry options to use for the executor.
@@ -107,7 +107,7 @@ impl<E> RetryExecutor<E> {
     ///
     /// # Parameters
     /// - `operation`: Synchronous operation to execute. It is called once per
-    ///   attempt until it returns `Ok`, the classifier aborts, or retry limits
+    ///   attempt until it returns `Ok`, the decider aborts, or retry limits
     ///   are exhausted.
     ///
     /// # Returns
@@ -115,7 +115,7 @@ impl<E> RetryExecutor<E> {
     /// application error or timeout metadata.
     ///
     /// # Errors
-    /// Returns [`RetryError::Aborted`] when the classifier aborts,
+    /// Returns [`RetryError::Aborted`] when the decider aborts,
     /// [`RetryError::AttemptsExceeded`] when the attempt limit is reached, or
     /// [`RetryError::MaxElapsedExceeded`] when the total elapsed-time budget is
     /// exhausted.
@@ -150,7 +150,7 @@ impl<E> RetryExecutor<E> {
                 }
                 Err(error) => {
                     let failure = RetryAttemptFailure::Error(error);
-                    // Classifier + limits decide whether to sleep and retry or
+                    // Decider + limits decide whether to sleep and retry or
                     // finish with a terminal `RetryError`.
                     match self.handle_failure(attempts, start, failure) {
                         RetryFailureAction::Retry { delay, failure } => {
@@ -183,7 +183,7 @@ impl<E> RetryExecutor<E> {
     /// application error.
     ///
     /// # Errors
-    /// Returns [`RetryError::Aborted`] when the classifier aborts,
+    /// Returns [`RetryError::Aborted`] when the decider aborts,
     /// [`RetryError::AttemptsExceeded`] when the attempt limit is reached, or
     /// [`RetryError::MaxElapsedExceeded`] when the total elapsed-time budget is
     /// exhausted.
@@ -220,7 +220,7 @@ impl<E> RetryExecutor<E> {
                 }
                 Err(error) => {
                     let failure = RetryAttemptFailure::Error(error);
-                    // Classifier + limits decide whether to sleep and retry or
+                    // Decider + limits decide whether to sleep and retry or
                     // finish with a terminal `RetryError`.
                     match self.handle_failure(attempts, start, failure) {
                         RetryFailureAction::Retry { delay, failure } => {
@@ -253,7 +253,7 @@ impl<E> RetryExecutor<E> {
     /// application error or timeout metadata.
     ///
     /// # Errors
-    /// Returns [`RetryError::Aborted`] when the classifier aborts an
+    /// Returns [`RetryError::Aborted`] when the decider aborts an
     /// application error, [`RetryError::AttemptsExceeded`] when the attempt
     /// limit is reached, or [`RetryError::MaxElapsedExceeded`] when the total
     /// elapsed-time budget is exhausted. Attempt timeouts are represented as
@@ -328,7 +328,7 @@ impl<E> RetryExecutor<E> {
     ///
     /// # Parameters
     /// - `options`: Retry options used by the executor.
-    /// - `classifier`: Application-error classifier shared by cloned executors.
+    /// - `retry_decider`: [`RetryDecider`] shared by cloned executors (uses each failure's `E`).
     /// - `listeners`: Optional callbacks invoked during execution.
     ///
     /// # Returns
@@ -339,21 +339,21 @@ impl<E> RetryExecutor<E> {
     /// before constructing the executor.
     pub(super) fn new(
         options: RetryOptions,
-        classifier: RetryErrorClassifier<E>,
+        retry_decider: RetryDecider<E>,
         listeners: RetryListeners<E>,
     ) -> Self {
         Self {
             options,
-            classifier,
+            retry_decider,
             listeners,
         }
     }
 
-    /// Classifies a failed attempt and decides the next executor action.
+    /// Handles a failed attempt and decides the next executor action.
     ///
     /// # Processing
     /// 1. Builds [`RetryAttemptContext`] from elapsed time and attempt counts, then
-    ///    classifies the failure: application errors go through [`RetryErrorClassifier`];
+    ///    asks the [`RetryDecider`]: application errors `E` go through it;
     ///    [`RetryAttemptFailure::AttemptTimeout`] is treated as retryable unless
     ///    limits below apply.
     /// 2. If the decision is [`RetryDecision::Abort`], emits the abort listener
@@ -396,10 +396,10 @@ impl<E> RetryExecutor<E> {
             max_attempts: self.options.max_attempts.get(),
             elapsed,
         };
-        // Application errors consult the classifier; attempt timeouts are
+        // Application errors consult the decider; attempt timeouts are
         // always retryable unless limits below say otherwise.
         let decision = match &failure {
-            RetryAttemptFailure::Error(error) => self.classifier.apply(error, &context),
+            RetryAttemptFailure::Error(error) => self.retry_decider.apply(error, &context),
             RetryAttemptFailure::AttemptTimeout { .. } => RetryDecision::Retry,
         };
         if decision == RetryDecision::Abort {
@@ -577,7 +577,7 @@ impl<E> RetryExecutor<E> {
     /// # Parameters
     /// - `attempts`: Number of attempts that were executed.
     /// - `elapsed`: Total elapsed duration at abort.
-    /// - `failure`: Failure that caused the classifier to abort retrying.
+    /// - `failure`: Failure that caused the decider to abort retrying.
     ///
     /// # Returns
     /// This function returns nothing.
