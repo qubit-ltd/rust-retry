@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use qubit_config::{ConfigReader, ConfigResult};
 
-use crate::{RetryDelay, RetryJitter, RetryConfigError};
+use crate::{RetryConfigError, RetryDelay, RetryJitter};
 
 /// Immutable retry option snapshot used by [`crate::RetryExecutor`].
 ///

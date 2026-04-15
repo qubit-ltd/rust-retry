@@ -16,7 +16,7 @@ use qubit_function::{ArcBiConsumer, ArcConsumer};
 
 use crate::RetryAttemptFailure;
 
-use super::{RetryAbortContext, RetryFailureContext, RetryContext, RetrySuccessContext};
+use super::{RetryAbortContext, RetryContext, RetryFailureContext, RetrySuccessContext};
 
 /// Listener invoked before sleeping for a retry.
 ///
@@ -33,7 +33,8 @@ pub type RetrySuccessListener = ArcConsumer<RetrySuccessContext>;
 ///
 /// The callback receives failure metadata plus an optional final failure
 /// payload (`None` means stopped before the first attempt).
-pub type RetryFailureListener<E> = ArcBiConsumer<RetryFailureContext, Option<RetryAttemptFailure<E>>>;
+pub type RetryFailureListener<E> =
+    ArcBiConsumer<RetryFailureContext, Option<RetryAttemptFailure<E>>>;
 
 /// Listener invoked when the classifier aborts retrying.
 ///

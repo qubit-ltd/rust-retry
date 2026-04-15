@@ -18,9 +18,10 @@ use qubit_function::{ArcBiFunction, BiFunction, BiPredicate};
 
 use crate::event::RetryListeners;
 use crate::{
-    RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryAttemptFailure, RetryDelay, RetryFailureContext,
-    RetryFailureListener, RetryJitter, RetryConfigError, RetryContext, RetryDecision, RetryListener,
-    RetryOptions, RetrySuccessContext, RetrySuccessListener,
+    RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryAttemptFailure,
+    RetryConfigError, RetryContext, RetryDecision, RetryDelay, RetryFailureContext,
+    RetryFailureListener, RetryJitter, RetryListener, RetryOptions, RetrySuccessContext,
+    RetrySuccessListener,
 };
 
 use crate::error::RetryErrorClassifier;

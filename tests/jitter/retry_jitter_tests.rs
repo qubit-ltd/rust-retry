@@ -27,7 +27,10 @@ fn test_apply_symmetric_factor_and_validate_bounds() {
     let base = Duration::from_millis(100);
     assert_eq!(RetryJitter::none().apply(base), base);
     assert_eq!(RetryJitter::factor(0.0).apply(base), base);
-    assert_eq!(RetryJitter::factor(0.5).apply(Duration::ZERO), Duration::ZERO);
+    assert_eq!(
+        RetryJitter::factor(0.5).apply(Duration::ZERO),
+        Duration::ZERO
+    );
     assert_eq!(RetryJitter::default(), RetryJitter::None);
 
     for _ in 0..30 {

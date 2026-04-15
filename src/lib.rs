@@ -23,12 +23,13 @@ pub mod options;
 mod retry_executor;
 mod retry_executor_builder;
 
-pub use options::{RetryDelay, RetryJitter, RetryOptions};
-pub use error::{RetryAttemptFailure, RetryErrorClassifier, RetryConfigError, RetryError};
+pub use error::{RetryAttemptFailure, RetryConfigError, RetryError, RetryErrorClassifier};
 pub use event::{
-    RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryFailureContext, RetryFailureListener, RetryContext,
-    RetryDecision, RetryListener, RetrySuccessContext, RetrySuccessListener,
+    RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryContext, RetryDecision,
+    RetryFailureContext, RetryFailureListener, RetryListener, RetrySuccessContext,
+    RetrySuccessListener,
 };
+pub use options::{RetryDelay, RetryJitter, RetryOptions};
 pub use retry_executor::RetryExecutor;
 pub use retry_executor_builder::RetryExecutorBuilder;
 

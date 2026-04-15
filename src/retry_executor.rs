@@ -21,8 +21,8 @@ use qubit_function::{BiConsumer, BiFunction, Consumer};
 
 use crate::event::RetryListeners;
 use crate::{
-    RetryAbortContext, RetryAttemptContext, RetryAttemptFailure, RetryFailureContext, RetryConfigError, RetryContext,
-    RetryDecision, RetryError, RetryOptions, RetrySuccessContext,
+    RetryAbortContext, RetryAttemptContext, RetryAttemptFailure, RetryConfigError, RetryContext,
+    RetryDecision, RetryError, RetryFailureContext, RetryOptions, RetrySuccessContext,
 };
 
 use crate::error::RetryErrorClassifier;

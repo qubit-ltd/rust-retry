@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use qubit_retry::{
-    RetryAttemptContext, RetryAttemptFailure, RetryDelay, RetryDecision, RetryError, RetryExecutor,
+    RetryAttemptContext, RetryAttemptFailure, RetryDecision, RetryDelay, RetryError, RetryExecutor,
 };
 
 use crate::support::{NonCloneValue, TestError};
@@ -163,7 +163,10 @@ fn test_retry_if_can_abort_and_preserve_original_error() {
         .retry_if(|error: &TestError, _: &RetryAttemptContext| error.0 == "retry")
         .on_abort(move |event, failure| {
             assert_eq!(event.attempts, 1);
-            assert!(matches!(failure, RetryAttemptFailure::Error(TestError("fatal"))));
+            assert!(matches!(
+                failure,
+                RetryAttemptFailure::Error(TestError("fatal"))
+            ));
             abort_events_for_listener.fetch_add(1, Ordering::SeqCst);
         })
         .build()
