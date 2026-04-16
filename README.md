@@ -17,8 +17,8 @@ The core API is `RetryExecutor<E>`. An executor is bound only to the operation e
 - Sync retry via `RetryExecutor::run`.
 - Async retry via `RetryExecutor::run_async`.
 - Real async per-attempt timeout via `RetryExecutor::run_async_with_timeout`.
-- Delay strategies: `Delay::none`, `Delay::fixed`, `Delay::random`, `Delay::exponential`.
-- Symmetric jitter through `Jitter::factor`.
+- Delay strategies: `RetryDelay::none`, `RetryDelay::fixed`, `RetryDelay::random`, `RetryDelay::exponential`.
+- Symmetric jitter through `RetryJitter::factor`.
 - Explicit retry classification with `retry_if` or `retry_decide`.
 - Listener contexts for retry/failure/abort plus borrowed failure payloads.
 - Listener callback storage based on `qubit-function` functors (`ArcConsumer` / `ArcBiConsumer`).
@@ -37,19 +37,19 @@ The core API is `RetryExecutor<E>`. An executor is bound only to the operation e
 
 ```toml
 [dependencies]
-qubit-retry = "0.4.0"
+qubit-retry = "0.6.0"
 ```
 
 ## Basic Sync Retry
 
 ```rust
-use qubit_retry::{Delay, RetryExecutor};
+use qubit_retry::{RetryDelay, RetryExecutor};
 use std::time::Duration;
 
 fn read_config() -> Result<String, Box<dyn std::error::Error>> {
     let executor = RetryExecutor::<std::io::Error>::builder()
         .max_attempts(3)
-        .delay(Delay::fixed(Duration::from_millis(100)))
+        .delay(RetryDelay::fixed(Duration::from_millis(100)))
         .build()?;
 
     let text = executor.run(|| std::fs::read_to_string("config.toml"))?;
@@ -62,7 +62,7 @@ fn read_config() -> Result<String, Box<dyn std::error::Error>> {
 By default, all operation errors are retryable until the attempt or elapsed-time limit is reached. Use `retry_if` when only some errors should be retried:
 
 ```rust
-use qubit_retry::{Delay, RetryExecutor};
+use qubit_retry::{RetryDelay, RetryExecutor};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -89,7 +89,7 @@ fn is_retryable(error: &ServiceError) -> bool {
 
 let executor = RetryExecutor::<ServiceError>::builder()
     .max_attempts(4)
-    .delay(Delay::exponential(
+    .delay(RetryDelay::exponential(
         Duration::from_millis(100),
         Duration::from_secs(2),
         2.0,
@@ -120,7 +120,7 @@ let executor = RetryExecutor::<ServiceError>::builder()
 `run_async_with_timeout` uses `tokio::time::timeout`, so timed-out attempts are actually cancelled at the future boundary.
 
 ```rust
-use qubit_retry::{Delay, RetryExecutor};
+use qubit_retry::{RetryDelay, RetryExecutor};
 use std::time::Duration;
 
 async fn fetch_once() -> Result<String, std::io::Error> {
@@ -130,7 +130,7 @@ async fn fetch_once() -> Result<String, std::io::Error> {
 async fn fetch_with_retry() -> Result<String, Box<dyn std::error::Error>> {
     let executor = RetryExecutor::<std::io::Error>::builder()
         .max_attempts(3)
-        .delay(Delay::fixed(Duration::from_millis(50)))
+        .delay(RetryDelay::fixed(Duration::from_millis(50)))
         .build()?;
 
     let response = executor
@@ -158,21 +158,21 @@ let response = executor
 Retry/failure/abort listeners receive a context object plus a borrowed failure payload. Success listeners still receive only `SuccessContext`.
 
 ```rust
-pub type RetryListener<E> = ArcBiConsumer<RetryContext, AttemptFailure<E>>;
-pub type FailureListener<E> = ArcBiConsumer<FailureContext, Option<AttemptFailure<E>>>;
-pub type AbortListener<E> = ArcBiConsumer<AbortContext, AttemptFailure<E>>;
-pub type SuccessListener = ArcConsumer<SuccessContext>;
+pub type RetryListener<E> = ArcBiConsumer<RetryContext, RetryAttemptFailure<E>>;
+pub type FailureListener<E> = ArcBiConsumer<RetryFailureContext, Option<RetryAttemptFailure<E>>>;
+pub type AbortListener<E> = ArcBiConsumer<RetryAbortContext, RetryAttemptFailure<E>>;
+pub type SuccessListener = ArcConsumer<RetrySuccessContext>;
 ```
 
 ```rust
-use qubit_retry::{AttemptFailure, Delay, RetryExecutor};
+use qubit_retry::{RetryAttemptFailure, RetryDelay, RetryExecutor};
 use std::time::Duration;
 
 let executor = RetryExecutor::<std::io::Error>::builder()
     .max_attempts(3)
-    .delay(Delay::fixed(Duration::from_millis(100)))
+    .delay(RetryDelay::fixed(Duration::from_millis(100)))
     .on_retry(|context, failure| {
-        if let AttemptFailure::Error(error) = failure {
+        if let RetryAttemptFailure::Error(error) = failure {
             tracing::warn!(
                 attempt = context.attempt,
                 delay_ms = context.next_delay.as_millis(),
