@@ -162,12 +162,14 @@ impl RetryJitter {
     /// This function does not return errors.
     ///
     /// # Panics
-    /// May panic if a [`RetryJitter::Factor`] value has not been validated and the
-    /// factor is non-finite, because the random range cannot be sampled.
+    /// This function does not panic for non-finite factors. Non-finite values
+    /// gracefully fall back to returning `base`.
     pub fn apply(&self, base: Duration) -> Duration {
         match self {
             Self::None => base,
-            Self::Factor(factor) if *factor <= 0.0 || base.is_zero() => base,
+            Self::Factor(factor) if !factor.is_finite() || *factor <= 0.0 || base.is_zero() => {
+                base
+            }
             Self::Factor(factor) => {
                 let base_nanos = base.as_nanos() as f64;
                 let span = base_nanos * factor;
@@ -196,8 +198,8 @@ impl RetryJitter {
     /// This function does not return errors.
     ///
     /// # Panics
-    /// May panic if a [`RetryJitter::Factor`] value has not been validated and
-    /// its factor is non-finite.
+    /// This function does not panic for non-finite factors. Non-finite values
+    /// gracefully fall back to returning the base delay.
     pub fn delay_for_attempt(&self, delay_strategy: &RetryDelay, attempt: u32) -> Duration {
         let base_delay = delay_strategy.base_delay(attempt);
         self.apply(base_delay)

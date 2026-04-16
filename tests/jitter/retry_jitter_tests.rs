@@ -48,6 +48,25 @@ fn test_apply_symmetric_factor_and_validate_bounds() {
     assert!(RetryJitter::factor(f64::NAN).validate().is_err());
 }
 
+/// Verifies invalid jitter factors do not panic when applied directly.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when invalid factors do not gracefully
+/// degrade to the base delay.
+#[test]
+fn test_apply_invalid_factor_falls_back_to_base_delay() {
+    let base = Duration::from_millis(100);
+    assert_eq!(RetryJitter::factor(f64::NAN).apply(base), base);
+    assert_eq!(RetryJitter::factor(f64::INFINITY).apply(base), base);
+    assert_eq!(RetryJitter::factor(f64::NEG_INFINITY).apply(base), base);
+}
+
 /// Verifies `delay_for_attempt` combines base-delay strategy and jitter.
 ///
 /// # Parameters

@@ -49,7 +49,7 @@ fn test_to_options_missing_max_elapsed_millis_uses_default_budget() {
     let options = sample_retry_config_values_none_delay()
         .to_options(&default)
         .expect("valid merged options");
-    assert_eq!(options.max_elapsed, Some(Duration::from_secs(42)));
+    assert_eq!(options.max_elapsed(), Some(Duration::from_secs(42)));
 }
 
 /// Verifies `max_elapsed_millis` of zero overrides a non-empty default budget to unlimited.
@@ -74,5 +74,5 @@ fn test_to_options_zero_max_elapsed_millis_overrides_default_to_unlimited() {
     let mut values = sample_retry_config_values_none_delay();
     values.max_elapsed_millis = Some(0);
     let options = values.to_options(&default).expect("valid merged options");
-    assert_eq!(options.max_elapsed, None);
+    assert_eq!(options.max_elapsed(), None);
 }

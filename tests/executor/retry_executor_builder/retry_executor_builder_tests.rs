@@ -101,7 +101,7 @@ fn test_build_and_from_options_allow_borrowed_error_type() {
         .delay(RetryDelay::none())
         .build()
         .expect("builder should support borrowed error types");
-    assert_eq!(built_executor.options().max_attempts.get(), 3);
+    assert_eq!(built_executor.options().max_attempts(), 3);
 
     let run_result = from_options_executor
         .run(|| -> Result<(), BorrowedError<'_>> { Err(BorrowedError(message.as_str())) });
@@ -127,12 +127,12 @@ fn test_timeout_decision_builder_methods_work() {
         .delay(RetryDelay::none())
         .build()
         .expect("abort_on_timeout should be accepted");
-    assert_eq!(abort_on_timeout.options().max_attempts.get(), 3);
+    assert_eq!(abort_on_timeout.options().max_attempts(), 3);
 
     let explicit_retry = RetryExecutor::<TestError>::builder()
         .timeout_decision(RetryDecision::Retry)
         .delay(RetryDelay::none())
         .build()
         .expect("explicit timeout retry decision should be accepted");
-    assert_eq!(explicit_retry.options().max_attempts.get(), 3);
+    assert_eq!(explicit_retry.options().max_attempts(), 3);
 }

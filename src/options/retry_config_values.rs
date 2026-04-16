@@ -111,7 +111,7 @@ impl RetryConfigValues {
     /// Returns [`RetryConfigError`] when the delay strategy name is unsupported
     /// or the resulting options fail validation.
     pub fn to_options(&self, default: &RetryOptions) -> Result<RetryOptions, RetryConfigError> {
-        let max_attempts = self.max_attempts.unwrap_or(default.max_attempts.get());
+        let max_attempts = self.max_attempts.unwrap_or(default.max_attempts());
         let max_elapsed = self.get_max_elapsed(default);
         let delay = self.get_delay(default)?;
         let jitter = self.get_jitter(default);
@@ -134,7 +134,7 @@ impl RetryConfigValues {
         match self.max_elapsed_millis {
             Some(0) => None,
             Some(millis) => Some(Duration::from_millis(millis)),
-            None => default.max_elapsed,
+            None => default.max_elapsed(),
         }
     }
 
@@ -160,7 +160,7 @@ impl RetryConfigValues {
         match strategy.as_deref() {
             None => Ok(self
                 .get_implicit_delay()
-                .unwrap_or_else(|| default.delay.clone())),
+                .unwrap_or_else(|| default.delay().clone())),
             Some("none") => Ok(RetryDelay::None),
             Some("fixed") => Ok(RetryDelay::fixed(Duration::from_millis(
                 self.fixed_delay_millis.unwrap_or(1000),
@@ -229,7 +229,7 @@ impl RetryConfigValues {
     /// by [`RetryOptions::new`].
     fn get_jitter(&self, default: &RetryOptions) -> RetryJitter {
         match self.jitter_factor {
-            Some(0.0) | None => default.jitter,
+            Some(0.0) | None => default.jitter(),
             Some(factor) => RetryJitter::Factor(factor),
         }
     }

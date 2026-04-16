@@ -37,16 +37,76 @@ use crate::{RetryConfigError, RetryDelay, RetryJitter};
 #[derive(Debug, Clone, PartialEq)]
 pub struct RetryOptions {
     /// Maximum attempts, including the initial attempt.
-    pub max_attempts: NonZeroU32,
+    pub(crate) max_attempts: NonZeroU32,
     /// Maximum total elapsed time for the retry flow, in milliseconds.
-    pub max_elapsed: Option<Duration>,
+    pub(crate) max_elapsed: Option<Duration>,
     /// Base delay strategy between attempts.
-    pub delay: RetryDelay,
+    pub(crate) delay: RetryDelay,
     /// RetryJitter applied to each base delay.
-    pub jitter: RetryJitter,
+    pub(crate) jitter: RetryJitter,
 }
 
 impl RetryOptions {
+    /// Returns maximum attempts, including the initial attempt.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// Maximum attempts configured for one retry execution.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn max_attempts(&self) -> u32 {
+        self.max_attempts.get()
+    }
+
+    /// Returns maximum total elapsed-time budget.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// `Some(Duration)` for bounded executions, or `None` for unlimited.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn max_elapsed(&self) -> Option<Duration> {
+        self.max_elapsed
+    }
+
+    /// Returns the base delay strategy.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// Borrowed delay strategy used by the executor.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn delay(&self) -> &RetryDelay {
+        &self.delay
+    }
+
+    /// Returns the jitter strategy.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// Jitter strategy used by the executor.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn jitter(&self) -> RetryJitter {
+        self.jitter
+    }
+
     /// Creates and validates a retry option snapshot.
     ///
     /// # Parameters

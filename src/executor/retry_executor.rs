@@ -721,7 +721,7 @@ mod tests {
             .build()
             .expect("executor should be built");
 
-        assert_eq!(executor.options().max_attempts.get(), 1);
+        assert_eq!(executor.options().max_attempts(), 1);
         assert!(format!("{executor:?}").contains("RetryExecutor"));
         let value = executor
             .run(|| Ok::<_, BoxError>("default-box-error"))
