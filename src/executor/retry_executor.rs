@@ -42,9 +42,10 @@ pub struct RetryExecutor<E = BoxError> {
     /// jitter, optional `max_elapsed`).
     options: RetryOptions,
     /// Decides whether to retry after each application error; timeouts from
-    /// [`RetryAttemptFailure::AttemptTimeout`] bypass the retry decider and are treated as
-    /// retryable unless executor limits stop execution.
+    /// [`RetryAttemptFailure::AttemptTimeout`] use `timeout_decision`.
     retry_decider: RetryDecider<E>,
+    /// Decision used when one attempt fails with [`RetryAttemptFailure::AttemptTimeout`].
+    timeout_decision: RetryDecision,
     /// Optional hooks invoked on success, retry scheduling, terminal failure,
     /// or decider-initiated abort.
     listeners: RetryListeners<E>,
@@ -328,7 +329,8 @@ impl<E> RetryExecutor<E> {
     ///
     /// # Parameters
     /// - `options`: Retry options used by the executor.
-    /// - `retry_decider`: [`RetryDecider`] shared by cloned executors (uses each failure's `E`).
+    /// - `retry_decider`: [`RetryDecider`] shared by cloned executors (uses each application error `E`).
+    /// - `timeout_decision`: Decision used for [`RetryAttemptFailure::AttemptTimeout`].
     /// - `listeners`: Optional callbacks invoked during execution.
     ///
     /// # Returns
@@ -340,11 +342,13 @@ impl<E> RetryExecutor<E> {
     pub(super) fn new(
         options: RetryOptions,
         retry_decider: RetryDecider<E>,
+        timeout_decision: RetryDecision,
         listeners: RetryListeners<E>,
     ) -> Self {
         Self {
             options,
             retry_decider,
+            timeout_decision,
             listeners,
         }
     }
@@ -396,11 +400,11 @@ impl<E> RetryExecutor<E> {
             max_attempts: self.options.max_attempts.get(),
             elapsed,
         };
-        // Application errors consult the decider; attempt timeouts are
-        // always retryable unless limits below say otherwise.
+        // Application errors consult the decider; attempt timeouts use the
+        // builder-configured timeout decision.
         let decision = match &failure {
             RetryAttemptFailure::Error(error) => self.retry_decider.apply(error, &context),
-            RetryAttemptFailure::AttemptTimeout { .. } => RetryDecision::Retry,
+            RetryAttemptFailure::AttemptTimeout { .. } => self.timeout_decision,
         };
         if decision == RetryDecision::Abort {
             self.emit_abort(attempts, elapsed, &failure);

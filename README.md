@@ -17,6 +17,7 @@ The core API is `RetryExecutor<E>`. An executor is bound only to the operation e
 - Sync retry via `RetryExecutor::run`.
 - Async retry via `RetryExecutor::run_async`.
 - Real async per-attempt timeout via `RetryExecutor::run_async_with_timeout`.
+- Configurable timeout handling via `timeout_decision` / `abort_on_timeout`.
 - Delay strategies: `RetryDelay::none`, `RetryDelay::fixed`, `RetryDelay::random`, `RetryDelay::exponential`.
 - Symmetric jitter through `RetryJitter::factor`.
 - Explicit retry classification with `retry_if` or `retry_decide`.

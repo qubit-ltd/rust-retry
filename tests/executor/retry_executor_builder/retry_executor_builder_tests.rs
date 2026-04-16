@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use qubit_retry::constants::{KEY_DELAY, KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS};
-use qubit_retry::{RetryDelay, RetryExecutor, RetryJitter, RetryOptions};
+use qubit_retry::{RetryDecision, RetryDelay, RetryExecutor, RetryJitter, RetryOptions};
 
 use crate::support::TestError;
 
@@ -108,4 +108,31 @@ fn test_build_and_from_options_allow_borrowed_error_type() {
     let run_error = run_result.expect_err("operation should fail with borrowed error");
     assert_eq!(run_error.attempts(), 2);
     assert_eq!(run_error.last_error(), Some(&BorrowedError("borrowed")));
+}
+
+/// Verifies timeout decision builder methods are chainable and accepted by build.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when timeout decision options are not accepted.
+#[test]
+fn test_timeout_decision_builder_methods_work() {
+    let abort_on_timeout = RetryExecutor::<TestError>::builder()
+        .abort_on_timeout()
+        .delay(RetryDelay::none())
+        .build()
+        .expect("abort_on_timeout should be accepted");
+    assert_eq!(abort_on_timeout.options().max_attempts.get(), 3);
+
+    let explicit_retry = RetryExecutor::<TestError>::builder()
+        .timeout_decision(RetryDecision::Retry)
+        .delay(RetryDelay::none())
+        .build()
+        .expect("explicit timeout retry decision should be accepted");
+    assert_eq!(explicit_retry.options().max_attempts.get(), 3);
 }

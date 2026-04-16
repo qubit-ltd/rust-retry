@@ -763,3 +763,60 @@ async fn test_run_async_with_timeout_exhaustion_returns_timeout_failure() {
     ));
     assert_eq!(error.into_last_error(), None);
 }
+
+/// Verifies timeout decision can abort immediately on the first timed-out attempt.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when `abort_on_timeout` does not stop retrying.
+#[tokio::test]
+async fn test_run_async_with_timeout_can_abort_on_timeout() {
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let attempts_for_operation = Arc::clone(&attempts);
+    let abort_events = Arc::new(AtomicUsize::new(0));
+    let abort_events_for_listener = Arc::clone(&abort_events);
+    let retry_events = Arc::new(AtomicUsize::new(0));
+    let retry_events_for_listener = Arc::clone(&retry_events);
+    let executor = RetryExecutor::<TestError>::builder()
+        .max_attempts(3)
+        .delay(RetryDelay::fixed(Duration::from_millis(1)))
+        .abort_on_timeout()
+        .on_abort(move |_, failure| {
+            assert!(matches!(failure, RetryAttemptFailure::AttemptTimeout { .. }));
+            abort_events_for_listener.fetch_add(1, Ordering::SeqCst);
+        })
+        .on_retry(move |_, _| {
+            retry_events_for_listener.fetch_add(1, Ordering::SeqCst);
+        })
+        .build()
+        .expect("executor should be built");
+
+    let error = executor
+        .run_async_with_timeout(Duration::from_millis(2), || {
+            let attempts_for_operation = Arc::clone(&attempts_for_operation);
+            async move {
+                attempts_for_operation.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                Ok::<(), TestError>(())
+            }
+        })
+        .await
+        .expect_err("timeout should abort retrying");
+
+    assert_eq!(attempts.load(Ordering::SeqCst), 1);
+    assert_eq!(retry_events.load(Ordering::SeqCst), 0);
+    assert_eq!(abort_events.load(Ordering::SeqCst), 1);
+    assert!(matches!(
+        error,
+        RetryError::Aborted {
+            attempts: 1,
+            failure: RetryAttemptFailure::AttemptTimeout { .. },
+            ..
+        }
+    ));
+}

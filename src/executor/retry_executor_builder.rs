@@ -38,6 +38,8 @@ pub struct RetryExecutorBuilder<E = BoxError> {
     options: RetryOptions,
     /// Optional [`RetryDecider`]; when absent, every application error is treated as retryable.
     retry_decider: Option<RetryDecider<E>>,
+    /// Decision used for [`crate::RetryAttemptFailure::AttemptTimeout`].
+    timeout_decision: RetryDecision,
     /// Hooks invoked on success, failure, abort, and each retry attempt.
     listeners: RetryListeners<E>,
     /// Set when `max_attempts` was configured as zero; surfaced from [`Self::build`].
@@ -57,6 +59,7 @@ impl<E> RetryExecutorBuilder<E> {
         Self {
             options: RetryOptions::default(),
             retry_decider: None,
+            timeout_decision: RetryDecision::Retry,
             listeners: RetryListeners::default(),
             max_attempts_error: None,
         }
@@ -229,6 +232,38 @@ impl<E> RetryExecutorBuilder<E> {
         self
     }
 
+    /// Sets how attempt timeouts should be handled.
+    ///
+    /// # Parameters
+    /// - `decision`: Decision used when one attempt ends with
+    ///   [`crate::RetryAttemptFailure::AttemptTimeout`].
+    ///
+    /// # Returns
+    /// The updated builder.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn timeout_decision(mut self, decision: RetryDecision) -> Self {
+        self.timeout_decision = decision;
+        self
+    }
+
+    /// Convenience helper to abort retrying when one attempt times out.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// The updated builder.
+    ///
+    /// # Errors
+    /// This method does not return errors.
+    #[inline]
+    pub fn abort_on_timeout(self) -> Self {
+        self.timeout_decision(RetryDecision::Abort)
+    }
+
     /// Registers a listener invoked before retry sleep.
     ///
     /// # Parameters
@@ -340,6 +375,7 @@ impl<E> RetryExecutorBuilder<E> {
         Ok(RetryExecutor::new(
             self.options,
             retry_decider,
+            self.timeout_decision,
             self.listeners,
         ))
     }
