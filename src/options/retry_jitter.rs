@@ -150,7 +150,8 @@ impl RetryJitter {
     /// `base` unchanged. Otherwise draws a uniform sample from the inclusive range
     /// `[-base * factor, base * factor]` in nanosecond space, adds it to the base,
     /// then clamps the result to **at least zero** (truncating the sum to `u64`
-    /// nanoseconds).
+    /// nanoseconds). When `base` exceeds `u64::MAX` nanoseconds, this function
+    /// returns `base` unchanged to avoid lossy downcasts.
     ///
     /// # Parameters
     /// - `base`: Base delay calculated by [`crate::RetryDelay`].
@@ -171,11 +172,16 @@ impl RetryJitter {
                 base
             }
             Self::Factor(factor) => {
-                let base_nanos = base.as_nanos() as f64;
+                let base_nanos_u128 = base.as_nanos();
+                if base_nanos_u128 > u64::MAX as u128 {
+                    return base;
+                }
+                let base_nanos = base_nanos_u128 as f64;
                 let span = base_nanos * factor;
                 let mut rng = rand::rng();
                 let jitter = rng.random_range(-span..=span);
-                Duration::from_nanos((base_nanos + jitter).max(0.0) as u64)
+                let nanos = (base_nanos + jitter).clamp(0.0, u64::MAX as f64) as u64;
+                Duration::from_nanos(nanos)
             }
         }
     }

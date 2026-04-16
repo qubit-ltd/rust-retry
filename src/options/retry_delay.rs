@@ -292,13 +292,15 @@ impl RetryDelay {
         attempt: u32,
     ) -> Duration {
         let power = attempt.saturating_sub(1);
-        let base_nanos = initial.as_nanos() as f64;
-        let max_nanos = max.as_nanos() as f64;
-        let nanos = base_nanos * multiplier.powi(power.min(i32::MAX as u32) as i32);
-        if !nanos.is_finite() || nanos >= max_nanos {
+        let factor = multiplier.powi(power.min(i32::MAX as u32) as i32);
+        if !factor.is_finite() {
             return max;
         }
-        Duration::from_nanos(nanos.max(0.0) as u64)
+        let secs = initial.as_secs_f64() * factor;
+        if !secs.is_finite() || secs >= max.as_secs_f64() {
+            return max;
+        }
+        Duration::try_from_secs_f64(secs).map_or(max, |delay| delay.min(max))
     }
 
     /// Validates strategy parameters.

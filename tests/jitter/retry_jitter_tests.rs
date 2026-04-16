@@ -67,6 +67,23 @@ fn test_apply_invalid_factor_falls_back_to_base_delay() {
     assert_eq!(RetryJitter::factor(f64::NEG_INFINITY).apply(base), base);
 }
 
+/// Verifies jitter preserves very large durations that exceed `u64` nanoseconds.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when jitter application truncates huge
+/// durations.
+#[test]
+fn test_apply_large_duration_factor_returns_base() {
+    let base = Duration::from_secs(20_000_000_000);
+    assert_eq!(RetryJitter::factor(0.5).apply(base), base);
+}
+
 /// Verifies `delay_for_attempt` combines base-delay strategy and jitter.
 ///
 /// # Parameters

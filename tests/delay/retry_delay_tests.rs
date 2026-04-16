@@ -52,6 +52,29 @@ fn test_base_delay_none_fixed_random_and_exponential_values() {
     assert_eq!(exponential.base_delay(u32::MAX), Duration::from_millis(500));
 }
 
+/// Verifies exponential delay handles very large durations without lossy
+/// nanosecond downcasts.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when large-duration exponential delay
+/// calculation truncates unexpectedly.
+#[test]
+fn test_exponential_delay_handles_large_durations() {
+    let initial = Duration::from_secs(20_000_000_000);
+    let max = Duration::from_secs(40_000_000_000);
+    let exponential = RetryDelay::exponential(initial, max, 2.0);
+
+    assert_eq!(exponential.base_delay(1), initial);
+    assert_eq!(exponential.base_delay(2), max);
+    assert_eq!(exponential.base_delay(3), max);
+}
+
 /// Verifies delay validation rejects invalid strategy parameters.
 ///
 /// # Parameters
