@@ -7,9 +7,12 @@
  *
  ******************************************************************************/
 
+use std::error::Error;
+use std::str::FromStr;
 use std::time::Duration;
 
-use qubit_retry::{RetryDelay, RetryJitter};
+use qubit_retry::constants::DEFAULT_RETRY_JITTER;
+use qubit_retry::{ParseRetryJitterError, RetryDelay, RetryJitter};
 
 /// Verifies factor jitter application and validation bounds.
 ///
@@ -81,4 +84,297 @@ fn test_delay_for_attempt_combines_delay_strategy_and_jitter() {
         assert!(delay >= Duration::from_millis(40));
         assert!(delay <= Duration::from_millis(60));
     }
+}
+
+/// Documents [`std::str::FromStr`] for [`RetryJitter`].
+///
+/// Accepts `none` (ASCII case-insensitive) or `factor:<f64>` with ASCII trimming
+/// around the number; the factor must lie in `[0.0, 1.0]`.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when parsing behavior changes unexpectedly.
+#[test]
+fn test_retry_jitter_from_str() {
+    assert_eq!(RetryJitter::from_str("none").unwrap(), RetryJitter::None);
+    assert_eq!(
+        RetryJitter::from_str("  none  ").unwrap(),
+        RetryJitter::None
+    );
+    assert_eq!(
+        RetryJitter::from_str("NONE").unwrap(),
+        RetryJitter::None
+    );
+    assert_eq!(
+        RetryJitter::from_str("factor:0.2").unwrap(),
+        RetryJitter::factor(0.2)
+    );
+    assert_eq!(
+        RetryJitter::from_str("factor: 0.25 ").unwrap(),
+        RetryJitter::factor(0.25)
+    );
+    assert!(matches!(
+        RetryJitter::from_str("factor"),
+        Err(ParseRetryJitterError::InvalidFormat)
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor()"),
+        Err(ParseRetryJitterError::InvalidFormat)
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor(0.2)"),
+        Err(ParseRetryJitterError::InvalidFormat)
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor:1.1"),
+        Err(ParseRetryJitterError::OutOfRange { .. })
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor:-0.1"),
+        Err(ParseRetryJitterError::OutOfRange { .. })
+    ));
+    assert!(RetryJitter::from_str("factor:").is_err());
+    assert!(RetryJitter::from_str("").is_err());
+}
+
+/// Covers additional [`RetryJitter::from_str`] branches: boundaries, numeric forms,
+/// ASCII `none` spellings, and case-sensitive `factor:` prefix.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when parsing behavior changes unexpectedly.
+#[test]
+fn test_retry_jitter_from_str_boundaries_and_numeric_forms() {
+    assert_eq!(RetryJitter::from_str("factor:0").unwrap(), RetryJitter::factor(0.0));
+    assert_eq!(RetryJitter::from_str("factor:1").unwrap(), RetryJitter::factor(1.0));
+    assert_eq!(RetryJitter::from_str("factor:1.0").unwrap(), RetryJitter::factor(1.0));
+    assert_eq!(RetryJitter::from_str("factor:0.0").unwrap(), RetryJitter::factor(0.0));
+    assert_eq!(
+        RetryJitter::from_str("factor:.5").unwrap(),
+        RetryJitter::factor(0.5)
+    );
+    assert_eq!(
+        RetryJitter::from_str("factor:+0.25").unwrap(),
+        RetryJitter::factor(0.25)
+    );
+    assert_eq!(
+        RetryJitter::from_str("factor:1e0").unwrap(),
+        RetryJitter::factor(1.0)
+    );
+    assert_eq!(
+        RetryJitter::from_str("factor:5e-1").unwrap(),
+        RetryJitter::factor(0.5)
+    );
+
+    assert_eq!(
+        RetryJitter::from_str("  \t factor:0.3 \n ").unwrap(),
+        RetryJitter::factor(0.3)
+    );
+    assert_eq!(
+        RetryJitter::from_str("NoNe").unwrap(),
+        RetryJitter::None
+    );
+
+    for prefix in ["FACTOR:0.5", "Factor:0.5", "not-factor:0.5"] {
+        assert!(
+            matches!(RetryJitter::from_str(prefix), Err(ParseRetryJitterError::InvalidFormat)),
+            "expected InvalidFormat for {prefix:?}"
+        );
+    }
+
+    assert_eq!(
+        RetryJitter::from_str("  factor:0.4  ").unwrap(),
+        RetryJitter::factor(0.4)
+    );
+}
+
+/// Verifies [`RetryJitter::from_str`] rejects empty / non-matching tokens and values
+/// outside `[0.0, 1.0]` including non-finite floats parsed from text.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when parsing behavior changes unexpectedly.
+#[test]
+fn test_retry_jitter_from_str_invalid_format_out_of_range_and_bad_number() {
+    for s in ["", "   ", "other", "nonee", "fact", "factor"] {
+        assert!(
+            matches!(RetryJitter::from_str(s), Err(ParseRetryJitterError::InvalidFormat)),
+            "expected InvalidFormat for {s:?}"
+        );
+    }
+
+    assert!(matches!(
+        RetryJitter::from_str("factor:2"),
+        Err(ParseRetryJitterError::OutOfRange { value }) if value == 2.0
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor:-1"),
+        Err(ParseRetryJitterError::OutOfRange { value }) if value == -1.0
+    ));
+
+    for s in ["factor:nan", "factor:inf", "factor:Infinity"] {
+        let err = RetryJitter::from_str(s).unwrap_err();
+        match err {
+            ParseRetryJitterError::OutOfRange { value } => assert!(
+                !value.is_finite(),
+                "expected non-finite value from {s:?}, got {value}"
+            ),
+            other => panic!("expected OutOfRange for {s:?}, got {other:?}"),
+        }
+    }
+
+    assert!(matches!(
+        RetryJitter::from_str("factor:  "),
+        Err(ParseRetryJitterError::InvalidNumber(_))
+    ));
+    assert!(matches!(
+        RetryJitter::from_str("factor:xyz"),
+        Err(ParseRetryJitterError::InvalidNumber(_))
+    ));
+}
+
+/// Verifies [`ParseRetryJitterError`] [`std::fmt::Display`] text and [`Error::source`]
+/// wiring for [`ParseRetryJitterError::InvalidNumber`].
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when error representations change unexpectedly.
+#[test]
+fn test_parse_retry_jitter_error_display_and_source() {
+    let invalid_format = RetryJitter::from_str("nope").unwrap_err();
+    assert_eq!(
+        invalid_format.to_string(),
+        "invalid retry jitter format, expected `none` or `factor:<number>`"
+    );
+    assert!(invalid_format.source().is_none());
+
+    let out_of_range = RetryJitter::from_str("factor:3").unwrap_err();
+    assert_eq!(
+        out_of_range.to_string(),
+        "retry jitter factor must be in range [0.0, 1.0], got 3"
+    );
+    assert!(out_of_range.source().is_none());
+
+    let bad_number = RetryJitter::from_str("factor:not-a-number").unwrap_err();
+    assert_eq!(bad_number.to_string(), "invalid retry jitter factor");
+    assert!(bad_number.source().is_some());
+}
+
+/// Verifies [`std::fmt::Display`] / [`std::str::FromStr`] round-trip for edge factors
+/// and stable parsing of [`RetryJitter`] display output.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when display or parsing behavior drifts.
+#[test]
+fn test_retry_jitter_display_parse_round_trip_variants() {
+    for jitter in [
+        RetryJitter::None,
+        RetryJitter::factor(0.0),
+        RetryJitter::factor(1.0),
+        RetryJitter::factor(0.125),
+    ] {
+        let s = jitter.to_string();
+        assert_eq!(RetryJitter::from_str(&s).unwrap(), jitter);
+    }
+}
+
+/// Documents [`std::fmt::Display`] and display / parse round-trip for [`RetryJitter`].
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when display behavior changes unexpectedly.
+#[test]
+fn test_retry_jitter_display_and_round_trip() {
+    assert_eq!(format!("{}", RetryJitter::None), "none");
+    assert_eq!(format!("{}", RetryJitter::none()), "none");
+    assert_eq!(format!("{}", RetryJitter::factor(0.25)), "factor:0.25");
+
+    let parsed = RetryJitter::from_str(&format!("{}", RetryJitter::factor(0.25))).unwrap();
+    assert_eq!(parsed, RetryJitter::factor(0.25));
+}
+
+/// Documents JSON shape produced by `serde_json` for [`RetryJitter`].
+///
+/// `serde_json` encodes a **unit** enum variant as a bare JSON string holding the
+/// Rust variant name (for example [`RetryJitter::None`] becomes `"None"`). A
+/// **single-field** tuple variant is encoded as a one-key object mapping the
+/// variant name to the inner value (for example `{"Factor":0.25}`).
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when serde JSON encoding changes unexpectedly.
+#[test]
+fn test_retry_jitter_json_serde_json_shapes() {
+    assert_eq!(
+        serde_json::to_string(&RetryJitter::None).unwrap(),
+        r#""None""#
+    );
+    assert_eq!(
+        serde_json::to_string(&RetryJitter::factor(0.25)).unwrap(),
+        r#"{"Factor":0.25}"#
+    );
+
+    assert_eq!(
+        serde_json::from_str::<RetryJitter>(r#""None""#).unwrap(),
+        RetryJitter::None
+    );
+    assert_eq!(
+        serde_json::from_str::<RetryJitter>(r#"{"Factor":0.25}"#).unwrap(),
+        RetryJitter::factor(0.25)
+    );
+}
+
+/// Verifies [`qubit_retry::constants::DEFAULT_RETRY_JITTER`] matches [`RetryJitter::default`].
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when the default string and `Default` drift apart.
+#[test]
+fn test_default_retry_jitter_string_matches_retry_jitter_default() {
+    assert_eq!(
+        RetryJitter::from_str(DEFAULT_RETRY_JITTER).unwrap(),
+        RetryJitter::default()
+    );
+    assert_eq!(RetryJitter::default(), RetryJitter::None);
 }

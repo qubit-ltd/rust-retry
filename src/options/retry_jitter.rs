@@ -6,29 +6,70 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! RetryJitter applied to retry delays.
+//! Retry jitter applied on top of a base [`crate::RetryDelay`].
 //!
-//! RetryJitter is applied after the base [`crate::RetryDelay`] has been calculated. It
-//! helps callers avoid retry bursts when multiple tasks fail at the same time.
+//! After [`crate::RetryDelay`] yields a base sleep duration for the next attempt,
+//! [`RetryJitter`] optionally perturbs it so concurrent retries do not align on the
+//! same schedule.
+//!
+//! # Text interchange
+//!
+//! [`std::fmt::Display`] and [`std::str::FromStr`] use the same grammar:
+//!
+//! - `none` in any ASCII letter case (leading/trailing ASCII whitespace trimmed).
+//! - `factor:` followed by a floating-point literal in **`[0.0, 1.0]`**; optional
+//!   ASCII whitespace is allowed after the colon.
+//!
+//! The `factor:` prefix itself is **case-sensitive**. See
+//! [`crate::constants::DEFAULT_RETRY_JITTER`] for the library default string.
+//!
+//! Author: Haixing Hu
 
+use std::fmt;
+use std::num::ParseFloatError;
+use std::str::FromStr;
 use std::time::Duration;
 
 use rand::RngExt;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
+use crate::constants::DEFAULT_RETRY_JITTER;
 use crate::RetryDelay;
 
-/// RetryJitter applied after a base [`crate::RetryDelay`] has been calculated.
+/// Jitter strategy applied after a base [`crate::RetryDelay`] has been calculated.
 ///
-/// The current implementation supports no jitter and symmetric factor-based
-/// jitter. Factor jitter keeps the lower bound at zero to avoid negative
-/// durations after randomization.
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// Supports [`RetryJitter::None`] and symmetric [`RetryJitter::Factor`] jitter.
+/// After randomization, delays are clamped to **non-negative** values.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum RetryJitter {
-    /// No jitter.
+    /// No jitter: [`RetryJitter::apply`] returns the base delay unchanged.
     None,
 
-    /// Symmetric relative jitter: `base +/- base * factor`.
+    /// Symmetric relative jitter around the base delay.
+    ///
+    /// The inner `f64` is the relative half-span: jitter is drawn uniformly from
+    /// `[-base * factor, base * factor]` nanoseconds (see [`RetryJitter::apply`]).
+    /// It must be finite and lie in **`[0.0, 1.0]`** for validated configurations.
     Factor(f64),
+}
+
+/// Failure to parse a [`RetryJitter`] from its text form ([`std::str::FromStr`]).
+#[derive(Debug, Error)]
+pub enum ParseRetryJitterError {
+    /// After [`str::trim`], the input is neither `none` in any ASCII letter case nor
+    /// a string beginning with the literal ASCII prefix `factor:`.
+    #[error("invalid retry jitter format, expected `none` or `factor:<number>`")]
+    InvalidFormat,
+
+    /// The substring after `factor:` is not a valid `f64` (after trimming).
+    #[error("invalid retry jitter factor")]
+    InvalidNumber(#[from] ParseFloatError),
+
+    /// Parsed factor is not in the inclusive interval **`[0.0, 1.0]`** (includes
+    /// non-finite values such as NaN and infinity, which fail the range check).
+    #[error("retry jitter factor must be in range [0.0, 1.0], got {value}")]
+    OutOfRange { value: f64 },
 }
 
 impl RetryJitter {
@@ -68,8 +109,13 @@ impl RetryJitter {
 
     /// Applies jitter to a base delay.
     ///
-    /// A zero base delay is returned unchanged. Factor jitter samples a value
-    /// from the inclusive range `[-base * factor, base * factor]`.
+    /// For [`RetryJitter::None`], returns `base` unchanged.
+    ///
+    /// For [`RetryJitter::Factor`], if `factor <= 0.0` or `base` is zero, returns
+    /// `base` unchanged. Otherwise draws a uniform sample from the inclusive range
+    /// `[-base * factor, base * factor]` in nanosecond space, adds it to the base,
+    /// then clamps the result to **at least zero** (truncating the sum to `u64`
+    /// nanoseconds).
     ///
     /// # Parameters
     /// - `base`: Base delay calculated by [`crate::RetryDelay`].
@@ -122,10 +168,10 @@ impl RetryJitter {
         self.apply(base_delay)
     }
 
-    /// Validates jitter parameters.
+    /// Validates jitter parameters for use with executors and options.
     ///
-    /// Returns a human-readable message when the factor is negative, greater
-    /// than `1.0`, NaN, or infinite.
+    /// [`RetryJitter::None`] is always valid. For [`RetryJitter::Factor`], the factor
+    /// must be finite and satisfy **`0.0 <= factor <= 1.0`** (endpoints included).
     ///
     /// # Returns
     /// `Ok(())` when the jitter configuration is usable.
@@ -154,15 +200,86 @@ impl Default for RetryJitter {
     /// Creates the default jitter strategy.
     ///
     /// # Returns
-    /// [`RetryJitter::None`].
+    /// The value obtained by parsing [`crate::constants::DEFAULT_RETRY_JITTER`]
+    /// using [`RetryJitter::from_str`].
     ///
     /// # Parameters
     /// This function has no parameters.
     ///
     /// # Errors
     /// This function does not return errors.
+    ///
+    /// # Panics
+    /// Panics if [`crate::constants::DEFAULT_RETRY_JITTER`] is not a valid
+    /// [`RetryJitter`] string. That indicates a crate bug, not a caller mistake.
     #[inline]
     fn default() -> Self {
-        Self::None
+        Self::from_str(DEFAULT_RETRY_JITTER)
+            .expect("DEFAULT_RETRY_JITTER must be a valid RetryJitter string")
+    }
+}
+
+impl fmt::Display for RetryJitter {
+    /// Writes the canonical text form: `none`, or `factor:` followed by the factor
+    /// using the default `f64` formatter.
+    ///
+    /// # Parameters
+    /// - `f`: Output formatter.
+    ///
+    /// # Returns
+    /// `Ok(())` on success, or [`fmt::Error`] if the formatter rejects output.
+    ///
+    /// # Errors
+    /// Returns [`fmt::Error`] only when the underlying [`write!`] fails.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Factor(v) => write!(f, "factor:{v}"),
+        }
+    }
+}
+
+impl FromStr for RetryJitter {
+    /// Parse error type for invalid or out-of-range text.
+    type Err = ParseRetryJitterError;
+
+    /// Parses a [`RetryJitter`] from a single token string.
+    ///
+    /// Leading and trailing Unicode whitespace is removed with [`str::trim`]. The
+    /// `none` branch matches with [`str::eq_ignore_ascii_case`]. The `factor:` prefix
+    /// must match exactly in ASCII case; the number may be surrounded by ASCII
+    /// whitespace after the colon.
+    ///
+    /// # Parameters
+    /// - `s`: Input text (for example from configuration or CLI).
+    ///
+    /// # Returns
+    /// `Ok(Self)` on success, or [`ParseRetryJitterError`] describing the failure.
+    ///
+    /// # Errors
+    /// - [`ParseRetryJitterError::InvalidFormat`] when the token is neither `none`
+    ///   (ASCII case-insensitive) nor `factor:` followed by a number.
+    /// - [`ParseRetryJitterError::InvalidNumber`] when the factor is not a valid
+    ///   `f64`.
+    /// - [`ParseRetryJitterError::OutOfRange`] when the parsed factor is outside
+    ///   **`[0.0, 1.0]`** or is non-finite (NaN / infinity).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+
+        if s.eq_ignore_ascii_case("none") {
+            return Ok(Self::None);
+        }
+
+        let Some(raw) = s.strip_prefix("factor:") else {
+            return Err(ParseRetryJitterError::InvalidFormat);
+        };
+
+        let value: f64 = raw.trim().parse()?;
+
+        if !(0.0..=1.0).contains(&value) {
+            return Err(ParseRetryJitterError::OutOfRange { value });
+        }
+
+        Ok(Self::Factor(value))
     }
 }

@@ -9,6 +9,7 @@
 
 use std::time::Duration;
 
+use qubit_retry::constants::{KEY_DELAY, KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS};
 use qubit_retry::{RetryDelay, RetryExecutor, RetryJitter, RetryOptions};
 
 use crate::support::TestError;
@@ -36,19 +37,19 @@ fn test_build_validates_options_and_reports_builder_errors() {
         .delay(RetryDelay::fixed(Duration::ZERO))
         .build()
         .expect_err("zero fixed delay should be rejected");
-    assert_eq!(invalid_delay.path(), RetryOptions::KEY_DELAY);
+    assert_eq!(invalid_delay.path(), KEY_DELAY);
 
     let invalid_jitter = RetryExecutor::<TestError>::builder()
         .jitter_factor(1.5)
         .build()
         .expect_err("out-of-range jitter should be rejected");
-    assert_eq!(invalid_jitter.path(), RetryOptions::KEY_JITTER_FACTOR);
+    assert_eq!(invalid_jitter.path(), KEY_JITTER_FACTOR);
 
     let invalid_attempts = RetryExecutor::<TestError>::builder()
         .max_attempts(0)
         .build()
         .expect_err("zero attempts should be rejected");
-    assert_eq!(invalid_attempts.path(), RetryOptions::KEY_MAX_ATTEMPTS);
+    assert_eq!(invalid_attempts.path(), KEY_MAX_ATTEMPTS);
 }
 
 /// Verifies the default builder and executor debug output.

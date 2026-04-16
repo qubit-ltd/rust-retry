@@ -13,16 +13,24 @@
 
 use std::time::Duration;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{RetryAttemptFailure, RetryError};
 
 /// Action selected after handling one failed attempt.
 ///
 /// The generic parameter `E` is the caller's application error type preserved
 /// inside attempt failures and terminal retry errors.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "E: serde::Serialize",
+    deserialize = "E: serde::de::DeserializeOwned"
+))]
 pub(crate) enum RetryFailureAction<E> {
     /// Continue retrying after sleeping for the computed delay.
     Retry {
         /// RetryDelay to sleep before running the next attempt.
+        #[serde(with = "crate::serde_millis")]
         delay: Duration,
         /// Failure from the attempt that just completed.
         failure: RetryAttemptFailure<E>,

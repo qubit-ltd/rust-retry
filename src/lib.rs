@@ -16,12 +16,12 @@
 //! re-exported by this crate; callers that need the boxed error alias should
 //! import it from `qubit-common` directly.
 
+pub mod constants;
+mod serde_millis;
 pub mod error;
 pub mod event;
+pub mod executor;
 pub mod options;
-
-mod retry_executor;
-mod retry_executor_builder;
 
 pub use error::{RetryAttemptFailure, RetryConfigError, RetryDecider, RetryError};
 pub use event::{
@@ -29,9 +29,8 @@ pub use event::{
     RetryFailureContext, RetryFailureListener, RetryListener, RetrySuccessContext,
     RetrySuccessListener,
 };
-pub use options::{RetryDelay, RetryJitter, RetryOptions};
-pub use retry_executor::RetryExecutor;
-pub use retry_executor_builder::RetryExecutorBuilder;
+pub use options::{ParseRetryJitterError, RetryConfigValues, RetryDelay, RetryJitter, RetryOptions};
+pub use executor::{RetryExecutor, RetryExecutorBuilder};
 
 /// Result alias returned by retry executor execution.
 ///

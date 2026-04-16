@@ -7,4 +7,5 @@
  *
  ******************************************************************************/
 
+mod retry_config_values_tests;
 mod retry_options_tests;

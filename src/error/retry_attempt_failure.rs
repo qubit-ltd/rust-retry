@@ -14,12 +14,18 @@
 use std::fmt;
 use std::time::Duration;
 
+use serde::{Deserialize, Serialize};
+
 /// Failure produced by a single attempt.
 ///
 /// The generic parameter `E` is the caller's original application error type.
 /// Timeout failures do not contain an `E` value because they are produced by
 /// the retry executor while waiting for an asynchronous attempt.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "E: serde::Serialize",
+    deserialize = "E: serde::de::DeserializeOwned"
+))]
 pub enum RetryAttemptFailure<E> {
     /// The operation returned an application error.
     Error(E),
@@ -28,8 +34,10 @@ pub enum RetryAttemptFailure<E> {
     /// [`crate::RetryExecutor::run_async_with_timeout`].
     AttemptTimeout {
         /// Time observed by the retry executor for this attempt.
+        #[serde(with = "crate::serde_millis")]
         elapsed: Duration,
         /// Configured timeout for one attempt.
+        #[serde(with = "crate::serde_millis")]
         timeout: Duration,
     },
 }
@@ -74,29 +82,14 @@ impl<E> RetryAttemptFailure<E> {
     }
 }
 
-impl<E> fmt::Display for RetryAttemptFailure<E>
-where
-    E: fmt::Display,
-{
-    /// Formats the failure for diagnostics.
-    ///
-    /// # Parameters
-    /// - `f`: Formatter provided by the standard formatting machinery.
-    ///
-    /// # Returns
-    /// `fmt::Result` from the formatter.
-    ///
-    /// # Errors
-    /// Returns a formatting error if the underlying formatter fails.
+impl<E: fmt::Display> fmt::Display for RetryAttemptFailure<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Error(error) => write!(f, "{error}"),
-            Self::AttemptTimeout { elapsed, timeout } => {
-                write!(
-                    f,
-                    "attempt timed out after {elapsed:?}; timeout was {timeout:?}"
-                )
-            }
+            Self::AttemptTimeout { elapsed, timeout } => write!(
+                f,
+                "attempt timed out after {elapsed:?}; timeout was {timeout:?}"
+            ),
         }
     }
 }

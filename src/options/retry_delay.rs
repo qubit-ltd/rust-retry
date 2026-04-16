@@ -15,33 +15,61 @@
 use std::time::Duration;
 
 use rand::RngExt;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
+
+use crate::constants::{
+    DEFAULT_RETRY_EXPONENTIAL_INITIAL, DEFAULT_RETRY_EXPONENTIAL_MAX,
+    DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER,
+};
 
 /// Base delay strategy before jitter is applied.
 ///
 /// RetryDelay strategies are value types that can be reused across executors. Random
 /// and exponential strategies are validated separately by [`RetryDelay::validate`],
 /// which is called when building [`crate::RetryOptions`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Display,
+    EnumString,
+    Serialize,
+    Deserialize,
+)]
+#[strum(serialize_all = "snake_case")]
 pub enum RetryDelay {
     /// Retry immediately.
     None,
 
     /// Wait for a constant delay after every failed attempt.
-    Fixed(Duration),
+    #[strum(to_string = "fixed({0:?})")]
+    #[strum(disabled)]
+    Fixed(#[serde(with = "crate::serde_millis")] Duration),
 
     /// Pick a delay uniformly from the inclusive range.
+    #[strum(to_string = "random({min:?}..={max:?})")]
+    #[strum(disabled)]
     Random {
         /// Lower bound for the delay.
+        #[serde(with = "crate::serde_millis")]
         min: Duration,
         /// Upper bound for the delay.
+        #[serde(with = "crate::serde_millis")]
         max: Duration,
     },
 
     /// Exponential backoff capped by `max`.
+    #[strum(
+        to_string = "exponential(initial={initial:?}, max={max:?}, multiplier={multiplier})"
+    )]
+    #[strum(disabled)]
     Exponential {
         /// RetryDelay used for the first retry.
+        #[serde(with = "crate::serde_millis")]
         initial: Duration,
         /// Maximum delay.
+        #[serde(with = "crate::serde_millis")]
         max: Duration,
         /// Multiplicative factor applied per failed attempt.
         multiplier: f64,
@@ -283,9 +311,9 @@ impl Default for RetryDelay {
     #[inline]
     fn default() -> Self {
         Self::Exponential {
-            initial: Duration::from_secs(1),
-            max: Duration::from_secs(60),
-            multiplier: 2.0,
+            initial: DEFAULT_RETRY_EXPONENTIAL_INITIAL,
+            max: DEFAULT_RETRY_EXPONENTIAL_MAX,
+            multiplier: DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER,
         }
     }
 }

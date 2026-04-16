@@ -16,6 +16,7 @@ use std::time::Duration;
 use qubit_common::BoxError;
 use qubit_function::{ArcBiFunction, BiFunction, BiPredicate};
 
+use crate::constants::KEY_MAX_ATTEMPTS;
 use crate::event::RetryListeners;
 use crate::{
     RetryAbortContext, RetryAbortListener, RetryAttemptContext, RetryAttemptFailure,
@@ -25,7 +26,7 @@ use crate::{
 };
 
 use crate::error::RetryDecider;
-use crate::retry_executor::RetryExecutor;
+use super::retry_executor::RetryExecutor;
 
 /// Builder for [`RetryExecutor`].
 ///
@@ -97,7 +98,7 @@ impl<E> RetryExecutorBuilder<E> {
             self.max_attempts_error = None;
         } else {
             self.max_attempts_error = Some(RetryConfigError::invalid_value(
-                RetryOptions::KEY_MAX_ATTEMPTS,
+                KEY_MAX_ATTEMPTS,
                 "max_attempts must be greater than zero",
             ));
         }

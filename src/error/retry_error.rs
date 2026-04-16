@@ -16,6 +16,8 @@ use std::error::Error;
 use std::fmt;
 use std::time::Duration;
 
+use serde::{Deserialize, Serialize};
+
 use super::RetryAttemptFailure;
 
 /// Error returned when a retry executor terminates without a successful result.
@@ -23,7 +25,11 @@ use super::RetryAttemptFailure;
 /// The generic parameter `E` is the caller's application error type. It is
 /// preserved in the final [`RetryAttemptFailure`] whenever the terminal failure came
 /// from the user operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "E: serde::Serialize",
+    deserialize = "E: serde::de::DeserializeOwned"
+))]
 pub enum RetryError<E> {
     /// The configured [`crate::RetryDecider`] returned [`crate::RetryDecision::Abort`]
     /// for the last application error.
@@ -31,6 +37,7 @@ pub enum RetryError<E> {
         /// Number of attempts that were executed.
         attempts: u32,
         /// Total elapsed time observed by the retry executor.
+        #[serde(with = "crate::serde_millis")]
         elapsed: Duration,
         /// Failure that caused the abort.
         failure: RetryAttemptFailure<E>,
@@ -43,6 +50,7 @@ pub enum RetryError<E> {
         /// Configured attempt limit.
         max_attempts: u32,
         /// Total elapsed time observed by the retry executor.
+        #[serde(with = "crate::serde_millis")]
         elapsed: Duration,
         /// Last observed failure.
         last_failure: RetryAttemptFailure<E>,
@@ -53,8 +61,10 @@ pub enum RetryError<E> {
         /// Number of attempts that were executed.
         attempts: u32,
         /// Total elapsed time observed by the retry executor.
+        #[serde(with = "crate::serde_millis")]
         elapsed: Duration,
         /// Configured elapsed budget.
+        #[serde(with = "crate::serde_millis")]
         max_elapsed: Duration,
         /// Last failure, if any attempt ran before the budget was exhausted.
         last_failure: Option<RetryAttemptFailure<E>>,

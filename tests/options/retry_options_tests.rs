@@ -10,6 +10,11 @@
 use std::time::Duration;
 
 use qubit_config::Config;
+use qubit_retry::constants::{
+    KEY_DELAY, KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS, KEY_EXPONENTIAL_MAX_DELAY_MILLIS,
+    KEY_EXPONENTIAL_MULTIPLIER, KEY_FIXED_DELAY_MILLIS, KEY_MAX_ATTEMPTS,
+    KEY_RANDOM_MAX_DELAY_MILLIS, KEY_RANDOM_MIN_DELAY_MILLIS,
+};
 use qubit_retry::{RetryDelay, RetryJitter, RetryOptions};
 
 /// Verifies default options and direct construction.
@@ -36,7 +41,7 @@ fn test_validate_default_and_new() {
 
     let zero = RetryOptions::new(0, None, RetryDelay::none(), RetryJitter::none())
         .expect_err("zero attempts should be rejected");
-    assert_eq!(zero.path(), RetryOptions::KEY_MAX_ATTEMPTS);
+    assert_eq!(zero.path(), KEY_MAX_ATTEMPTS);
 }
 
 /// Verifies prefixed configuration values are read into fixed-delay options.
@@ -156,7 +161,7 @@ fn test_from_config_reads_other_delay_forms_and_reports_config_errors() {
         .expect("test config value should be set");
     let error = RetryOptions::from_config(&invalid_strategy)
         .expect_err("unsupported delay strategy should fail");
-    assert_eq!(error.path(), RetryOptions::KEY_DELAY);
+    assert_eq!(error.path(), KEY_DELAY);
     assert!(error.message().contains("unsupported"));
 
     let mut bad_type = Config::new();
@@ -165,7 +170,7 @@ fn test_from_config_reads_other_delay_forms_and_reports_config_errors() {
         .expect("test config value should be set");
     let error =
         RetryOptions::from_config(&bad_type).expect_err("wrong max_attempts type should fail");
-    assert_eq!(error.path(), RetryOptions::KEY_MAX_ATTEMPTS);
+    assert_eq!(error.path(), KEY_MAX_ATTEMPTS);
 }
 
 /// Verifies explicit and implicit delay defaults from configuration.
@@ -269,7 +274,7 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&fixed_bad)
             .expect_err("invalid fixed delay type should fail")
             .path(),
-        RetryOptions::KEY_FIXED_DELAY_MILLIS
+        KEY_FIXED_DELAY_MILLIS
     );
 
     let mut random_min_bad = Config::new();
@@ -283,7 +288,7 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&random_min_bad)
             .expect_err("invalid random min delay type should fail")
             .path(),
-        RetryOptions::KEY_RANDOM_MIN_DELAY_MILLIS
+        KEY_RANDOM_MIN_DELAY_MILLIS
     );
 
     let mut random_max_bad = Config::new();
@@ -297,7 +302,7 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&random_max_bad)
             .expect_err("invalid random max delay type should fail")
             .path(),
-        RetryOptions::KEY_RANDOM_MAX_DELAY_MILLIS
+        KEY_RANDOM_MAX_DELAY_MILLIS
     );
 
     let mut exponential_initial_bad = Config::new();
@@ -311,7 +316,7 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&exponential_initial_bad)
             .expect_err("invalid exponential initial delay type should fail")
             .path(),
-        RetryOptions::KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS
+        KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS
     );
 
     let mut exponential_max_bad = Config::new();
@@ -325,7 +330,7 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&exponential_max_bad)
             .expect_err("invalid exponential max delay type should fail")
             .path(),
-        RetryOptions::KEY_EXPONENTIAL_MAX_DELAY_MILLIS
+        KEY_EXPONENTIAL_MAX_DELAY_MILLIS
     );
 
     let mut exponential_multiplier_bad = Config::new();
@@ -339,6 +344,59 @@ fn test_from_config_reports_delay_parameter_type_errors() {
         RetryOptions::from_config(&exponential_multiplier_bad)
             .expect_err("invalid exponential multiplier type should fail")
             .path(),
-        RetryOptions::KEY_EXPONENTIAL_MULTIPLIER
+        KEY_EXPONENTIAL_MULTIPLIER
+    );
+}
+
+/// Verifies retry delay calculation helpers on [`RetryOptions`].
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+///
+/// # Errors
+/// The test fails through assertions when helper methods compute wrong delays.
+#[test]
+fn test_retry_options_delay_calculation_helpers() {
+    let options = RetryOptions::new(
+        4,
+        None,
+        RetryDelay::exponential(Duration::from_millis(10), Duration::from_millis(80), 2.0),
+        RetryJitter::none(),
+    )
+    .expect("retry options should be valid");
+
+    assert_eq!(options.base_delay_for_attempt(1), Duration::from_millis(10));
+    assert_eq!(options.base_delay_for_attempt(4), Duration::from_millis(80));
+    assert_eq!(options.delay_for_attempt(2), Duration::from_millis(20));
+    assert_eq!(
+        options.next_base_delay_from_current(Duration::from_millis(40)),
+        Duration::from_millis(80)
+    );
+    assert_eq!(
+        options.next_base_delay_from_current(Duration::from_millis(200)),
+        Duration::from_millis(80)
+    );
+    assert_eq!(
+        options.jittered_delay(Duration::from_millis(15)),
+        Duration::from_millis(15)
+    );
+    assert_eq!(
+        options.next_delay_from_current(Duration::from_millis(10)),
+        Duration::from_millis(20)
+    );
+
+    let fixed = RetryOptions::new(
+        3,
+        None,
+        RetryDelay::fixed(Duration::from_millis(7)),
+        RetryJitter::none(),
+    )
+    .expect("fixed retry options should be valid");
+    assert_eq!(
+        fixed.next_base_delay_from_current(Duration::from_millis(99)),
+        Duration::from_millis(7)
     );
 }
