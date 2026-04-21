@@ -307,7 +307,9 @@ impl<E> RetryExecutorBuilder<E> {
     where
         F: Fn(&RetrySuccessContext) + Send + Sync + 'static,
     {
-        self.listeners.success.push(RetrySuccessListener::new(listener));
+        self.listeners
+            .success
+            .push(RetrySuccessListener::new(listener));
         self
     }
 
@@ -329,7 +331,9 @@ impl<E> RetryExecutorBuilder<E> {
     where
         F: Fn(&RetryFailureContext, &Option<RetryAttemptFailure<E>>) + Send + Sync + 'static,
     {
-        self.listeners.failure.push(RetryFailureListener::new(listener));
+        self.listeners
+            .failure
+            .push(RetryFailureListener::new(listener));
         self
     }
 

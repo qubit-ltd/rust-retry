@@ -168,9 +168,7 @@ impl RetryJitter {
     pub fn apply(&self, base: Duration) -> Duration {
         match self {
             Self::None => base,
-            Self::Factor(factor) if !factor.is_finite() || *factor <= 0.0 || base.is_zero() => {
-                base
-            }
+            Self::Factor(factor) if !factor.is_finite() || *factor <= 0.0 || base.is_zero() => base,
             Self::Factor(factor) => {
                 let base_nanos_u128 = base.as_nanos();
                 if base_nanos_u128 > u64::MAX as u128 {

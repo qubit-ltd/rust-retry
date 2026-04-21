@@ -13,9 +13,9 @@
 //! operations on Tokio.
 
 use std::fmt;
-use std::time::{Duration, Instant};
 #[cfg(feature = "async-tokio")]
 use std::future::Future;
+use std::time::{Duration, Instant};
 
 use qubit_common::BoxError;
 use qubit_function::{BiConsumer, BiFunction, Consumer};
@@ -669,7 +669,7 @@ fn will_exceed_elapsed(elapsed: Duration, delay: Duration, max_elapsed: Duration
     // Treat overflow as "would exceed" so we never sleep with a bogus huge duration.
     elapsed
         .checked_add(delay)
-        .map_or(true, |next_elapsed| next_elapsed >= max_elapsed)
+        .is_none_or(|next_elapsed| next_elapsed >= max_elapsed)
 }
 
 /// Sleeps asynchronously when the delay is non-zero.
@@ -766,7 +766,7 @@ mod tests {
 
         let error = executor
             .run(|| -> Result<(), BoxError> {
-                let source = std::io::Error::new(std::io::ErrorKind::Other, "boxed failure");
+                let source = std::io::Error::other("boxed failure");
                 Err(Box::new(source) as BoxError)
             })
             .expect_err("single failed attempt should exceed attempts");
