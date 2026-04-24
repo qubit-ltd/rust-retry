@@ -7,34 +7,19 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![中文文档](https://img.shields.io/badge/文档-中文版-blue.svg)](README.zh_CN.md)
 
-Qubit Retry provides type-preserving retry executors for Rust sync and async operations.
+Qubit Retry provides type-preserving retry policies for Rust sync and async operations.
 
-The core API is `RetryExecutor<E>`. An executor is bound only to the operation error type `E`; the success type `T` is introduced by `run` or `run_async`. This means normal error retry does not require `T: Clone + Eq + Hash`.
+The core API is `Retry<E>`. The retry policy is bound only to the operation error type `E`; the success type `T` is introduced by each `run` or `run_async` call.
 
 ## Features
 
-- Type-preserving `RetryError<E>` that keeps the original operation error.
-- Sync retry via `RetryExecutor::run`.
-- Async retry via `RetryExecutor::run_async`.
-- Real async per-attempt timeout via `RetryExecutor::run_async_with_timeout`.
-- Configurable timeout handling via `timeout_decision` / `abort_on_timeout`.
-- Delay strategies: `RetryDelay::none`, `RetryDelay::fixed`, `RetryDelay::random`, `RetryDelay::exponential`.
-- Symmetric jitter through `RetryJitter::factor`.
-- Explicit retry classification with `retry_if` or `retry_decide`.
-- Listener contexts for retry/failure/abort plus borrowed failure payloads.
-- Multiple listeners per event type (registration order preserved).
-- Optional listener panic isolation via `isolate_listener_panics`.
-- Listener callback storage based on `qubit-function` functors (`ArcConsumer` / `ArcBiConsumer`).
-- Immutable `RetryOptions` snapshots with `qubit-config` integration.
-
-## Core Concepts
-
-`qubit-retry` is designed around a type-preserving retry executor with clear boundaries between retry policy, error classification, and operation execution:
-
-- `RetryExecutor<E>` stores retry behavior and error classification.
-- `run<T, _>` and `run_async<T, _, _>` introduce the success type only at execution time.
-- Listener callbacks observe context metadata and borrowed failures instead of owned success values.
-- `RetryOptions` provides a validated immutable snapshot for retry configuration.
+- Sync retry works without optional features.
+- Async retry and per-attempt timeout are available with the `tokio` feature.
+- `qubit-config` integration is available with the `config` feature.
+- Retry callbacks are stored with `rs-function` functors, so closures and custom function objects are both supported.
+- `AttemptFailure<E>` represents one failed attempt: either `Error(E)` or `Timeout`.
+- `RetryError<E>` represents the terminal retry-flow error and carries `reason`, `last_failure`, and `RetryContext`.
+- Lifecycle hooks are explicit: `before_attempt`, `on_success`, `on_failure`, and `on_error`.
 
 ## Installation
 
@@ -43,94 +28,84 @@ The core API is `RetryExecutor<E>`. An executor is bound only to the operation e
 qubit-retry = "0.7.0"
 ```
 
-Sync-only builds can disable default features:
+Enable optional integrations as needed:
 
 ```toml
 [dependencies]
-qubit-retry = { version = "0.7.0", default-features = false }
+qubit-retry = { version = "0.7.0", features = ["tokio", "config"] }
 ```
+
+Optional features:
+
+- `tokio`: enables `Retry::run_async` and per-attempt async timeout support through `tokio::time::timeout`.
+- `config`: enables `RetryOptions::from_config` and `RetryConfigValues` for reading retry settings from `qubit-config`.
+
+The default feature set is empty, so synchronous retry does not pull in `tokio` or `qubit-config`.
 
 ## Basic Sync Retry
 
 ```rust
-use qubit_retry::{RetryDelay, RetryExecutor};
+use qubit_retry::Retry;
 use std::time::Duration;
 
 fn read_config() -> Result<String, Box<dyn std::error::Error>> {
-    let executor = RetryExecutor::<std::io::Error>::builder()
+    let retry = Retry::<std::io::Error>::builder()
         .max_attempts(3)
-        .delay(RetryDelay::fixed(Duration::from_millis(100)))
+        .fixed_delay(Duration::from_millis(100))
         .build()?;
 
-    let text = executor.run(|| std::fs::read_to_string("config.toml"))?;
+    let text = retry.run(|| std::fs::read_to_string("config.toml"))?;
     Ok(text)
 }
 ```
 
-## Error Classification
+## Failure Decisions
 
-By default, all operation errors are retryable until the attempt or elapsed-time limit is reached. Use `retry_if` when only some errors should be retried:
+By default, operation errors are retried until configured attempt or elapsed-time limits stop the flow. Use `retry_if_error` for simple error predicates:
 
 ```rust
-use qubit_retry::{RetryDelay, RetryExecutor};
+use qubit_retry::{Retry, RetryContext};
 use std::time::Duration;
 
-#[derive(Debug)]
-enum ServiceError {
-    RateLimited,
-    TemporaryUnavailable,
-    InvalidRequest,
-}
-
-impl std::fmt::Display for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for ServiceError {}
-
-fn is_retryable(error: &ServiceError) -> bool {
-    matches!(
-        error,
-        ServiceError::RateLimited | ServiceError::TemporaryUnavailable
-    )
-}
-
-let executor = RetryExecutor::<ServiceError>::builder()
+let retry = Retry::<ServiceError>::builder()
     .max_attempts(4)
-    .delay(RetryDelay::exponential(
-        Duration::from_millis(100),
-        Duration::from_secs(2),
-        2.0,
-    ))
-    .retry_if(|error, _context| is_retryable(error))
+    .exponential_backoff(Duration::from_millis(100), Duration::from_secs(2))
+    .retry_if_error(|error: &ServiceError, _context: &RetryContext| error.is_retryable())
     .build()?;
 ```
 
-Use `retry_decide` when the classifier needs to return a named decision:
+Use `on_failure` when decisions need access to attempt timeout, retry-after hints, or failure kind:
 
 ```rust
-use qubit_retry::{RetryDecision, RetryExecutor};
+use qubit_retry::{Retry, RetryContext, AttemptFailure, AttemptFailureDecision};
+use std::time::Duration;
 
-let executor = RetryExecutor::<ServiceError>::builder()
+let retry = Retry::<ServiceError>::builder()
     .max_attempts(3)
-    .retry_decide(|error, context| {
-        if context.attempt == 1 && is_retryable(error) {
-            RetryDecision::Retry
-        } else {
-            RetryDecision::Abort
-        }
-    })
+    .fixed_delay(Duration::from_millis(100))
+    .on_failure(
+        |failure: &AttemptFailure<ServiceError>, context: &RetryContext| match failure {
+            AttemptFailure::Error(error) if error.is_rate_limited() => {
+                AttemptFailureDecision::RetryAfter(Duration::from_secs(1))
+            }
+            AttemptFailure::Error(error) if error.is_retryable() => AttemptFailureDecision::Retry,
+            AttemptFailure::Timeout if context.attempt_timeout().is_some() => {
+                AttemptFailureDecision::Abort
+            }
+            _ => AttemptFailureDecision::UseDefault,
+        },
+    )
     .build()?;
 ```
 
-## Async Retry and Attempt Timeout
+`AttemptFailureDecision::UseDefault` lets the retry policy apply its configured limits, delay strategy, jitter, and optional retry-after hint.
 
-`run_async_with_timeout` uses `tokio::time::timeout`, so timed-out attempts are actually cancelled at the future boundary.
+## Async Retry and Timeout
+
+Async execution requires the `tokio` feature. Per-attempt timeout is configured on the builder and is reflected in `AttemptFailure::Timeout` plus `RetryContext::attempt_timeout()`.
 
 ```rust
-use qubit_retry::{RetryDelay, RetryExecutor};
+use qubit_retry::Retry;
 use std::time::Duration;
 
 async fn fetch_once() -> Result<String, std::io::Error> {
@@ -138,13 +113,15 @@ async fn fetch_once() -> Result<String, std::io::Error> {
 }
 
 async fn fetch_with_retry() -> Result<String, Box<dyn std::error::Error>> {
-    let executor = RetryExecutor::<std::io::Error>::builder()
+    let retry = Retry::<std::io::Error>::builder()
         .max_attempts(3)
-        .delay(RetryDelay::fixed(Duration::from_millis(50)))
+        .fixed_delay(Duration::from_millis(50))
+        .attempt_timeout(Some(Duration::from_secs(2)))
+        .retry_on_timeout()
         .build()?;
 
-    let response = executor
-        .run_async_with_timeout(Duration::from_secs(2), || async {
+    let response = retry
+        .run_async(|| async {
             fetch_once().await
         })
         .await?;
@@ -153,71 +130,74 @@ async fn fetch_with_retry() -> Result<String, Box<dyn std::error::Error>> {
 }
 ```
 
-Use `run_async` when you do not need a per-attempt timeout:
+## Retry-After Hints
+
+If the operation error type carries retry-after information, register a hint extractor. The default policy uses the hint when all failure listeners return `UseDefault`.
 
 ```rust
-let response = executor
-    .run_async(|| async {
-        fetch_once().await
-    })
-    .await?;
+use qubit_retry::Retry;
+use std::time::Duration;
+
+let retry = Retry::<ServiceError>::builder()
+    .max_attempts(3)
+    .retry_after_from_error(|error: &ServiceError| error.retry_after())
+    .fixed_delay(Duration::from_millis(100))
+    .build()?;
 ```
+
+Listeners can also read the extracted value from `RetryContext::retry_after_hint()`.
 
 ## Listeners
 
-Retry/failure/abort listeners receive a context object plus a borrowed failure payload. Success listeners still receive only `SuccessContext`.
+Listeners are lifecycle hooks, not separate policy systems:
+
+- `before_attempt`: invoked before every attempt, including the first attempt.
+- `on_success`: invoked after each successful attempt.
+- `on_failure`: invoked after each `AttemptFailure` and returns `AttemptFailureDecision`.
+- `on_error`: invoked once when the retry flow returns a terminal `RetryError`.
 
 ```rust
-pub type RetryListener<E> = ArcBiConsumer<RetryContext, RetryAttemptFailure<E>>;
-pub type FailureListener<E> = ArcBiConsumer<RetryFailureContext, Option<RetryAttemptFailure<E>>>;
-pub type AbortListener<E> = ArcBiConsumer<RetryAbortContext, RetryAttemptFailure<E>>;
-pub type SuccessListener = ArcConsumer<RetrySuccessContext>;
-```
+use qubit_retry::{
+    AttemptFailure, AttemptFailureDecision, Retry, RetryContext, RetryError,
+};
 
-```rust
-use qubit_retry::{RetryAttemptFailure, RetryDelay, RetryExecutor};
-use std::time::Duration;
-
-let executor = RetryExecutor::<std::io::Error>::builder()
+let retry = Retry::<std::io::Error>::builder()
     .max_attempts(3)
-    .delay(RetryDelay::fixed(Duration::from_millis(100)))
-    .on_retry(|context, failure| {
-        if let RetryAttemptFailure::Error(error) = failure {
+    .before_attempt(|context: &RetryContext| {
+        tracing::debug!(attempt = context.attempt(), "starting attempt");
+    })
+    .on_success(|context: &RetryContext| {
+        tracing::debug!(attempt = context.attempt(), "attempt succeeded");
+    })
+    .on_failure(
+        |failure: &AttemptFailure<std::io::Error>, context: &RetryContext| {
             tracing::warn!(
-                attempt = context.attempt,
-                delay_ms = context.next_delay.as_millis(),
-                error = %error,
-                "retrying operation",
+                failure = %failure,
+                attempt = context.attempt(),
+                retry_after_hint = ?context.retry_after_hint(),
+                "attempt failed",
             );
-        }
-    })
-    .on_failure(|context, last_failure| {
+            AttemptFailureDecision::UseDefault
+        },
+    )
+    .on_error(|error: &RetryError<std::io::Error>, context: &RetryContext| {
         tracing::error!(
-            attempts = context.attempts,
-            has_last_failure = last_failure.is_some(),
-            "operation failed after retry",
+            reason = ?error.reason(),
+            attempts = context.attempt(),
+            elapsed_ms = context.total_elapsed().as_millis(),
+            "retry flow failed",
         );
-    })
-    .on_abort(|context, failure| {
-        tracing::warn!(
-            attempts = context.attempts,
-            failure = ?failure,
-            "classifier aborted retry",
-        );
-    })
-    .on_success(|context| {
-        tracing::info!(attempts = context.attempts, "operation succeeded");
     })
     .build()?;
 ```
 
 ## Configuration
 
-`RetryOptions` is an immutable snapshot. Reading from `qubit-config` happens once during construction.
+`RetryOptions` is an immutable snapshot. Reading from `qubit-config` requires the `config` feature and happens during construction.
 
 ```rust
 use qubit_config::Config;
-use qubit_retry::{RetryOptions, RetryExecutor};
+use qubit_retry::{Retry, RetryOptions};
 
 let mut config = Config::new();
 config.set("retry.max_attempts", 5u32)?;
@@ -229,14 +209,14 @@ config.set("retry.exponential_multiplier", 2.0)?;
 config.set("retry.jitter_factor", 0.2)?;
 
 let options = RetryOptions::from_config(&config.prefix_view("retry"))?;
-let executor = RetryExecutor::<std::io::Error>::from_options(options)?;
+let retry = Retry::<std::io::Error>::from_options(options)?;
 ```
 
 Supported relative keys:
 
 - `max_attempts`
-- `max_elapsed_millis` (`0` means a zero-millisecond budget)
-- `max_elapsed_unlimited` (`true` forces unlimited elapsed budget)
+- `max_elapsed_millis`
+- `max_elapsed_unlimited`
 - `delay`: `none`, `fixed`, `random`, `exponential`, or `exponential_backoff`
 - `fixed_delay_millis`
 - `random_min_delay_millis`
@@ -248,25 +228,26 @@ Supported relative keys:
 
 ## Error Handling
 
-`RetryError<E>` preserves the original operation error when the terminal failure is an application error:
+Inspect `RetryError::reason()`, `RetryError::last_failure()`, and `RetryError::context()` to distinguish terminal causes from attempt failures:
 
 ```rust
-use qubit_retry::{RetryError, RetryExecutor};
+use qubit_retry::{Retry, RetryErrorReason, AttemptFailure};
 
-let executor = RetryExecutor::<std::io::Error>::builder()
+let retry = Retry::<std::io::Error>::builder()
     .max_attempts(2)
     .build()?;
 
-match executor.run(|| std::fs::read_to_string("missing.toml")) {
+match retry.run(|| std::fs::read_to_string("missing.toml")) {
     Ok(text) => println!("{text}"),
     Err(error) => {
-        eprintln!("attempts: {}", error.attempts());
-        if let Some(source) = error.last_error() {
-            eprintln!("last error: {source}");
-        }
+        eprintln!("reason: {:?}", error.reason());
+        eprintln!("attempts: {}", error.context().attempt());
+        eprintln!("elapsed: {:?}", error.context().total_elapsed());
 
-        if let RetryError::AttemptsExceeded { max_attempts, .. } = error {
-            eprintln!("max attempts: {max_attempts}");
+        if error.reason() == RetryErrorReason::AttemptsExceeded {
+            if let Some(AttemptFailure::Error(source)) = error.last_failure() {
+                eprintln!("last operation error: {source}");
+            }
         }
     }
 }
