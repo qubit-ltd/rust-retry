@@ -76,11 +76,32 @@ pub const KEY_JITTER_FACTOR: &str = "jitter_factor";
 
 /// Default maximum attempts (including the initial attempt) for
 /// [`crate::RetryOptions::default`].
-pub const DEFAULT_RETRY_MAX_ATTEMPTS: u32 = 3;
+pub const DEFAULT_RETRY_MAX_ATTEMPTS: u32 = 5;
 
 /// Default total elapsed-time budget for [`crate::RetryOptions::default`]:
 /// unlimited (`None`).
 pub const DEFAULT_RETRY_MAX_ELAPSED: Option<Duration> = None;
+
+/// Default fixed delay option value, in milliseconds.
+pub const DEFAULT_RETRY_FIXED_DELAY_MILLIS: u64 = 1000;
+
+/// Default random delay minimum option value, in milliseconds.
+pub const DEFAULT_RETRY_RANDOM_MIN_DELAY_MILLIS: u64 = 1000;
+
+/// Default random delay maximum option value, in milliseconds.
+pub const DEFAULT_RETRY_RANDOM_MAX_DELAY_MILLIS: u64 = 10000;
+
+/// Default exponential backoff initial delay option value, in milliseconds.
+pub const DEFAULT_RETRY_EXPONENTIAL_INITIAL_DELAY_MILLIS: u64 = 1000;
+
+/// Default exponential backoff maximum delay option value, in milliseconds.
+pub const DEFAULT_RETRY_EXPONENTIAL_MAX_DELAY_MILLIS: u64 = 60000;
+
+/// Default exponential backoff multiplier option value.
+pub const DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER: f64 = 2.0;
+
+/// Default jitter factor option value (`0.0` means no jitter).
+pub const DEFAULT_RETRY_JITTER_FACTOR: f64 = 0.0;
 
 /// Default delay text for [`crate::RetryDelay::default`] and any code that should
 /// match the library's built-in delay default.

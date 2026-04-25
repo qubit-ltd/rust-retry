@@ -9,6 +9,7 @@
 
 use std::time::Duration;
 
+use qubit_retry::constants::DEFAULT_RETRY_MAX_ATTEMPTS;
 use qubit_retry::{
     AttemptFailure, AttemptFailureDecision, Retry, RetryDelay, RetryJitter, RetryOptions,
 };
@@ -100,7 +101,7 @@ fn test_builder_options_random_exponential_and_default_work() {
             .expect("default retry should build")
             .options()
             .max_attempts(),
-        3
+        DEFAULT_RETRY_MAX_ATTEMPTS
     );
 }
 
@@ -149,12 +150,12 @@ fn test_timeout_convenience_methods_work() {
     let abort_decision = retry_abort
         .run(|| -> Result<(), TestError> { Err(TestError("error")) })
         .expect_err("non-timeout should use defaults");
-    assert_eq!(abort_decision.attempts(), 3);
+    assert_eq!(abort_decision.attempts(), DEFAULT_RETRY_MAX_ATTEMPTS);
 
     let continue_decision = retry_continue
         .run(|| -> Result<(), TestError> { Err(TestError("error")) })
         .expect_err("non-timeout should use defaults");
-    assert_eq!(continue_decision.attempts(), 3);
+    assert_eq!(continue_decision.attempts(), DEFAULT_RETRY_MAX_ATTEMPTS);
 }
 
 /// Verifies custom failure listeners can be registered with rs-function traits.

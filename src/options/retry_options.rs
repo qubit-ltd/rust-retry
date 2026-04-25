@@ -270,7 +270,7 @@ impl Default for RetryOptions {
     /// Creates the default retry options.
     ///
     /// # Returns
-    /// Options with three attempts, no total elapsed-time limit, exponential
+    /// Options with five attempts, no total elapsed-time limit, exponential
     /// delay, and no jitter.
     ///
     /// # Parameters

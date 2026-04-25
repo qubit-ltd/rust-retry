@@ -11,10 +11,11 @@ use std::time::Duration;
 
 use qubit_config::Config;
 use qubit_retry::constants::{
-    KEY_DELAY, KEY_DELAY_STRATEGY, KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS,
-    KEY_EXPONENTIAL_MAX_DELAY_MILLIS, KEY_EXPONENTIAL_MULTIPLIER, KEY_FIXED_DELAY_MILLIS,
-    KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS, KEY_MAX_ELAPSED_MILLIS, KEY_MAX_ELAPSED_UNLIMITED,
-    KEY_RANDOM_MAX_DELAY_MILLIS, KEY_RANDOM_MIN_DELAY_MILLIS,
+    DEFAULT_RETRY_MAX_ATTEMPTS, KEY_DELAY, KEY_DELAY_STRATEGY,
+    KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS, KEY_EXPONENTIAL_MAX_DELAY_MILLIS,
+    KEY_EXPONENTIAL_MULTIPLIER, KEY_FIXED_DELAY_MILLIS, KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS,
+    KEY_MAX_ELAPSED_MILLIS, KEY_MAX_ELAPSED_UNLIMITED, KEY_RANDOM_MAX_DELAY_MILLIS,
+    KEY_RANDOM_MIN_DELAY_MILLIS,
 };
 use qubit_retry::{RetryDelay, RetryJitter, RetryOptions};
 
@@ -32,7 +33,7 @@ use qubit_retry::{RetryDelay, RetryJitter, RetryOptions};
 #[test]
 fn test_validate_default_and_new() {
     let options = RetryOptions::default();
-    assert_eq!(options.max_attempts(), 3);
+    assert_eq!(options.max_attempts(), DEFAULT_RETRY_MAX_ATTEMPTS);
     assert_eq!(options.max_elapsed(), None);
     assert!(matches!(options.jitter(), RetryJitter::None));
 

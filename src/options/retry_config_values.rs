@@ -21,10 +21,14 @@ use super::retry_options::RetryOptions;
 
 use crate::RetryConfigError;
 use crate::constants::{
-    KEY_DELAY, KEY_DELAY_STRATEGY, KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS,
-    KEY_EXPONENTIAL_MAX_DELAY_MILLIS, KEY_EXPONENTIAL_MULTIPLIER, KEY_FIXED_DELAY_MILLIS,
-    KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS, KEY_MAX_ELAPSED_MILLIS, KEY_MAX_ELAPSED_UNLIMITED,
-    KEY_RANDOM_MAX_DELAY_MILLIS, KEY_RANDOM_MIN_DELAY_MILLIS,
+    DEFAULT_RETRY_EXPONENTIAL_INITIAL_DELAY_MILLIS, DEFAULT_RETRY_EXPONENTIAL_MAX_DELAY_MILLIS,
+    DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER, DEFAULT_RETRY_FIXED_DELAY_MILLIS,
+    DEFAULT_RETRY_JITTER_FACTOR, DEFAULT_RETRY_RANDOM_MAX_DELAY_MILLIS,
+    DEFAULT_RETRY_RANDOM_MIN_DELAY_MILLIS, KEY_DELAY, KEY_DELAY_STRATEGY,
+    KEY_EXPONENTIAL_INITIAL_DELAY_MILLIS, KEY_EXPONENTIAL_MAX_DELAY_MILLIS,
+    KEY_EXPONENTIAL_MULTIPLIER, KEY_FIXED_DELAY_MILLIS, KEY_JITTER_FACTOR, KEY_MAX_ATTEMPTS,
+    KEY_MAX_ELAPSED_MILLIS, KEY_MAX_ELAPSED_UNLIMITED, KEY_RANDOM_MAX_DELAY_MILLIS,
+    KEY_RANDOM_MIN_DELAY_MILLIS,
 };
 
 /// Raw retry configuration values read from `qubit-config`.
@@ -168,16 +172,30 @@ impl RetryConfigValues {
                 .unwrap_or_else(|| default.delay().clone())),
             Some("none") => Ok(RetryDelay::None),
             Some("fixed") => Ok(RetryDelay::fixed(Duration::from_millis(
-                self.fixed_delay_millis.unwrap_or(1000),
+                self.fixed_delay_millis
+                    .unwrap_or(DEFAULT_RETRY_FIXED_DELAY_MILLIS),
             ))),
             Some("random") => Ok(RetryDelay::random(
-                Duration::from_millis(self.random_min_delay_millis.unwrap_or(1000)),
-                Duration::from_millis(self.random_max_delay_millis.unwrap_or(10000)),
+                Duration::from_millis(
+                    self.random_min_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_RANDOM_MIN_DELAY_MILLIS),
+                ),
+                Duration::from_millis(
+                    self.random_max_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_RANDOM_MAX_DELAY_MILLIS),
+                ),
             )),
             Some("exponential") | Some("exponential_backoff") => Ok(RetryDelay::exponential(
-                Duration::from_millis(self.exponential_initial_delay_millis.unwrap_or(1000)),
-                Duration::from_millis(self.exponential_max_delay_millis.unwrap_or(60000)),
-                self.exponential_multiplier.unwrap_or(2.0),
+                Duration::from_millis(
+                    self.exponential_initial_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_INITIAL_DELAY_MILLIS),
+                ),
+                Duration::from_millis(
+                    self.exponential_max_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_MAX_DELAY_MILLIS),
+                ),
+                self.exponential_multiplier
+                    .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER),
             )),
             Some(other) => Err(RetryConfigError::invalid_value(
                 KEY_DELAY,
@@ -203,8 +221,14 @@ impl RetryConfigValues {
         }
         if self.random_min_delay_millis.is_some() || self.random_max_delay_millis.is_some() {
             return Some(RetryDelay::random(
-                Duration::from_millis(self.random_min_delay_millis.unwrap_or(1000)),
-                Duration::from_millis(self.random_max_delay_millis.unwrap_or(10000)),
+                Duration::from_millis(
+                    self.random_min_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_RANDOM_MIN_DELAY_MILLIS),
+                ),
+                Duration::from_millis(
+                    self.random_max_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_RANDOM_MAX_DELAY_MILLIS),
+                ),
             ));
         }
         if self.exponential_initial_delay_millis.is_some()
@@ -212,9 +236,16 @@ impl RetryConfigValues {
             || self.exponential_multiplier.is_some()
         {
             return Some(RetryDelay::exponential(
-                Duration::from_millis(self.exponential_initial_delay_millis.unwrap_or(1000)),
-                Duration::from_millis(self.exponential_max_delay_millis.unwrap_or(60000)),
-                self.exponential_multiplier.unwrap_or(2.0),
+                Duration::from_millis(
+                    self.exponential_initial_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_INITIAL_DELAY_MILLIS),
+                ),
+                Duration::from_millis(
+                    self.exponential_max_delay_millis
+                        .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_MAX_DELAY_MILLIS),
+                ),
+                self.exponential_multiplier
+                    .unwrap_or(DEFAULT_RETRY_EXPONENTIAL_MULTIPLIER),
             ));
         }
         None
@@ -234,7 +265,7 @@ impl RetryConfigValues {
     /// by [`RetryOptions::new`].
     fn get_jitter(&self, default: &RetryOptions) -> RetryJitter {
         match self.jitter_factor {
-            Some(0.0) => RetryJitter::None,
+            Some(factor) if factor == DEFAULT_RETRY_JITTER_FACTOR => RetryJitter::None,
             None => default.jitter(),
             Some(factor) => RetryJitter::Factor(factor),
         }
