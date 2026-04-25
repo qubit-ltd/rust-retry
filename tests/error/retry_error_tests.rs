@@ -105,6 +105,35 @@ fn test_retry_error_preserves_reason_context_and_last_failure() {
     assert_eq!(error.into_last_error(), Some(TestError("failed")));
 }
 
+/// Verifies `into_parts()` returns complete terminal retry data.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_retry_error_into_parts_returns_reason_failure_and_context() {
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(1)
+        .no_delay()
+        .build()
+        .expect("retry should build");
+
+    let error = retry
+        .run(|| -> Result<(), TestError> { Err(TestError("parts")) })
+        .expect_err("single failing attempt should stop");
+    let (reason, last_failure, context) = error.into_parts();
+
+    assert_eq!(reason, RetryErrorReason::AttemptsExceeded);
+    assert!(matches!(
+        last_failure,
+        Some(AttemptFailure::Error(TestError("parts")))
+    ));
+    assert_eq!(context.attempt(), 1);
+    assert_eq!(context.max_attempts(), 1);
+}
+
 /// Verifies retry error display output covers all terminal reasons.
 ///
 /// # Parameters

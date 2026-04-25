@@ -111,9 +111,6 @@ impl<E> RetryError<E> {
     /// # Returns
     /// `Some(&E)` when the terminal failure wraps an application error;
     /// `None` for timeout failures or elapsed-budget failures with no attempt.
-    ///
-    /// # Errors
-    /// This method does not return errors.
     #[inline]
     pub fn last_error(&self) -> Option<&E> {
         self.last_failure().and_then(AttemptFailure::as_error)
@@ -128,12 +125,21 @@ impl<E> RetryError<E> {
     /// # Returns
     /// `Some(E)` when the terminal failure owns an application error; `None`
     /// when the terminal failure was a timeout or when no attempt ran.
-    ///
-    /// # Errors
-    /// This method does not return errors.
     #[inline]
     pub fn into_last_error(self) -> Option<E> {
         self.last_failure.and_then(AttemptFailure::into_error)
+    }
+
+    /// Consumes the retry error and returns all terminal parts.
+    ///
+    /// # Parameters
+    /// This method has no parameters.
+    ///
+    /// # Returns
+    /// A tuple `(reason, last_failure, context)` preserving all terminal data.
+    #[inline]
+    pub fn into_parts(self) -> (RetryErrorReason, Option<AttemptFailure<E>>, RetryContext) {
+        (self.reason, self.last_failure, self.context)
     }
 }
 
