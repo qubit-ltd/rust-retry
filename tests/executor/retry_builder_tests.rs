@@ -421,6 +421,22 @@ fn test_attempt_timeout_option_updates_pending_policy_for_later_duration() {
     );
 }
 
+/// Verifies clearing the timeout option resets the pending timeout policy.
+#[test]
+fn test_attempt_timeout_option_none_resets_pending_policy_for_later_duration() {
+    let retry = Retry::<TestError>::builder()
+        .attempt_timeout_option(Some(AttemptTimeoutOption::abort(Duration::from_millis(3))))
+        .attempt_timeout_option(None)
+        .attempt_timeout(Some(Duration::from_millis(5)))
+        .build()
+        .expect("retry should build");
+
+    assert_eq!(
+        retry.options().attempt_timeout(),
+        Some(AttemptTimeoutOption::retry(Duration::from_millis(5)))
+    );
+}
+
 /// Verifies `build()` surfaces validation errors from merged options.
 #[test]
 fn test_build_propagates_option_validation_errors() {

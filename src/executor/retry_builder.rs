@@ -255,6 +255,8 @@ impl<E> RetryBuilder<E> {
     pub fn attempt_timeout_option(mut self, attempt_timeout: Option<AttemptTimeoutOption>) -> Self {
         if let Some(attempt_timeout) = attempt_timeout {
             self.pending_attempt_timeout_policy = attempt_timeout.policy();
+        } else {
+            self.pending_attempt_timeout_policy = AttemptTimeoutPolicy::default();
         }
         self.options.attempt_timeout = attempt_timeout;
         self
