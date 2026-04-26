@@ -151,6 +151,43 @@ async fn test_run_async_configured_timeout_wins_when_shorter_than_max_elapsed() 
     ));
 }
 
+/// Verifies a configured timeout policy wins when it equals remaining max elapsed.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[tokio::test]
+async fn test_run_async_configured_timeout_policy_wins_when_equal_to_remaining_elapsed() {
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(2)
+        .max_elapsed(Some(Duration::from_millis(20)))
+        .attempt_timeout(Some(Duration::from_millis(20)))
+        .abort_on_timeout()
+        .no_delay()
+        .build()
+        .expect("retry should build");
+
+    let error = retry
+        .run_async(|| async {
+            tokio::time::sleep(Duration::from_millis(120)).await;
+            Ok::<_, TestError>("late")
+        })
+        .await
+        .expect_err("configured timeout policy should abort on equal timeout");
+
+    assert_eq!(error.reason(), RetryErrorReason::Aborted);
+    assert_eq!(
+        error.context().attempt_timeout(),
+        Some(Duration::from_millis(20))
+    );
+    assert!(matches!(
+        error.last_failure(),
+        Some(AttemptFailure::Timeout)
+    ));
+}
+
 /// Verifies ordinary async failures can retry while max elapsed bounds attempts.
 ///
 /// # Parameters

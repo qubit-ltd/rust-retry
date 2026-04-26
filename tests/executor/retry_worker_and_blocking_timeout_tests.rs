@@ -135,6 +135,42 @@ fn test_run_in_worker_max_elapsed_caps_in_flight_attempt_without_configured_time
     );
 }
 
+/// Verifies a configured timeout policy wins when it equals remaining max elapsed.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_run_in_worker_configured_timeout_policy_wins_when_equal_to_remaining_elapsed() {
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(2)
+        .max_elapsed(Some(Duration::from_millis(20)))
+        .attempt_timeout(Some(Duration::from_millis(20)))
+        .abort_on_timeout()
+        .no_delay()
+        .build()
+        .expect("retry should build");
+
+    let error = retry
+        .run_in_worker(|_token: AttemptCancelToken| {
+            thread::sleep(Duration::from_millis(120));
+            Ok::<_, TestError>("late")
+        })
+        .expect_err("configured timeout policy should abort on equal timeout");
+
+    assert_eq!(error.reason(), RetryErrorReason::Aborted);
+    assert_eq!(
+        error.context().attempt_timeout(),
+        Some(Duration::from_millis(20))
+    );
+    assert!(matches!(
+        error.last_failure(),
+        Some(AttemptFailure::Timeout)
+    ));
+}
+
 /// Verifies ordinary worker failures can retry while max elapsed bounds attempts.
 ///
 /// # Parameters

@@ -170,11 +170,12 @@ impl<E> Retry<E> {
     ///
     /// Each attempt runs on a worker thread. Worker panics are captured as
     /// [`AttemptFailure::Panic`]. Worker-spawn failures are reported as
-    /// [`AttemptFailure::Executor`]. If the configured attempt timeout expires,
-    /// the retry executor stops waiting, marks the attempt's
-    /// [`AttemptCancelToken`] as cancelled, and continues according to
-    /// [`AttemptTimeoutPolicy`]. The timed-out worker thread may continue
-    /// running and overlap later attempts if the operation ignores the
+    /// [`AttemptFailure::Executor`]. If the effective timeout expires, the retry
+    /// executor stops waiting and marks the attempt's [`AttemptCancelToken`] as
+    /// cancelled. Configured attempt-timeout expirations continue according to
+    /// [`AttemptTimeoutPolicy`], while max-elapsed expirations stop with
+    /// [`RetryErrorReason::MaxElapsedExceeded`]. The timed-out worker thread may
+    /// continue running and overlap later attempts if the operation ignores the
     /// cancellation token.
     ///
     /// # Parameters
@@ -533,7 +534,8 @@ impl<E> Retry<E> {
     ///
     /// # Returns
     /// The shorter of the configured attempt timeout and remaining max-elapsed
-    /// budget, including the source that selected it.
+    /// budget, including the source that selected it. A configured timeout wins
+    /// ties so its timeout policy remains observable.
     fn effective_attempt_timeout(&self, total_elapsed: Duration) -> EffectiveAttemptTimeout {
         let configured = self.attempt_timeout_duration();
         let remaining = self.remaining_elapsed(total_elapsed);
@@ -546,7 +548,7 @@ impl<E> Retry<E> {
                 Some(remaining),
                 Some(AttemptTimeoutSource::MaxElapsed),
             ),
-            (Some(configured), Some(remaining)) if configured < remaining => {
+            (Some(configured), Some(remaining)) if configured <= remaining => {
                 EffectiveAttemptTimeout::new(
                     Some(configured),
                     Some(AttemptTimeoutSource::Configured),
