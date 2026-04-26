@@ -510,3 +510,63 @@ fn test_max_elapsed_can_stop_before_first_attempt() {
     assert_eq!(error.attempts(), 0);
     assert!(error.last_failure().is_none());
 }
+
+/// Verifies retry listener time is counted before sleeping for the next attempt.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_on_retry_listener_time_counts_against_elapsed_budget_before_sleep() {
+    let retry_events = Arc::new(Mutex::new(Vec::new()));
+    let scheduled_events = Arc::clone(&retry_events);
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(3)
+        .max_elapsed(Some(Duration::from_millis(600)))
+        .fixed_delay(Duration::from_millis(500))
+        .on_retry(
+            move |failure: &AttemptFailure<TestError>, context: &RetryContext| {
+                scheduled_events
+                    .lock()
+                    .expect("retry events should be lockable")
+                    .push((failure.as_error().cloned(), context.next_delay()));
+                std::thread::sleep(Duration::from_millis(120));
+            },
+        )
+        .build()
+        .expect("retry should build");
+
+    let mut attempts = 0;
+    let started = std::time::Instant::now();
+    let error = retry
+        .run(|| -> Result<(), TestError> {
+            attempts += 1;
+            Err(TestError("slow-listener"))
+        })
+        .expect_err("listener time should exhaust elapsed budget before sleep");
+    let elapsed = started.elapsed();
+
+    assert_eq!(error.reason(), RetryErrorReason::MaxElapsedExceeded);
+    assert_eq!(error.attempts(), 1);
+    assert_eq!(attempts, 1);
+    assert_eq!(error.last_error(), Some(&TestError("slow-listener")));
+    assert_eq!(
+        error.context().next_delay(),
+        Some(Duration::from_millis(500))
+    );
+    assert_eq!(
+        *retry_events
+            .lock()
+            .expect("retry events should be lockable"),
+        vec![(
+            Some(TestError("slow-listener")),
+            Some(Duration::from_millis(500))
+        )]
+    );
+    assert!(
+        elapsed < Duration::from_millis(450),
+        "retry should stop before sleeping for the scheduled delay, elapsed: {elapsed:?}"
+    );
+}

@@ -505,6 +505,16 @@ impl<E> Retry<E> {
         }
 
         self.emit_retry_scheduled(&failure, &context);
+        if let Some(max_elapsed) = self.options.max_elapsed
+            && will_exceed_elapsed(start.elapsed(), delay, max_elapsed)
+        {
+            return RetryFlowAction::Finished(RetryError::new(
+                RetryErrorReason::MaxElapsedExceeded,
+                Some(failure),
+                context,
+            ));
+        }
+
         RetryFlowAction::Retry { delay, failure }
     }
 
