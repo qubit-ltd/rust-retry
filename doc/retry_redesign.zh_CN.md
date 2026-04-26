@@ -219,6 +219,17 @@ pub struct RetryOptions {
     pub max_elapsed: Option<Duration>,
     pub delay: Delay,
     pub jitter: Jitter,
+    pub attempt_timeout: Option<AttemptTimeoutOption>,
+}
+
+pub struct AttemptTimeoutOption {
+    pub timeout: Duration,
+    pub policy: AttemptTimeoutPolicy,
+}
+
+pub enum AttemptTimeoutPolicy {
+    Retry,
+    Abort,
 }
 ```
 
@@ -276,9 +287,9 @@ let delay = options.jitter.apply(base, rng);
 建议明确区分：
 
 1. `max_elapsed`：整个 retry 流程的总预算，sync/async 都适用。
-2. `attempt_timeout`：单次 attempt 超时，只在 async API 中真正生效，因此不放进基础 `RetryOptions`。
+2. `attempt_timeout`：单次 attempt 超时，作为 `RetryOptions` 的可选配置；它在 async API 中通过 `tokio::time::timeout` 真正生效，在 blocking API 中通过 worker 线程隔离和等待超时生效。
 
-基础 sync API 不支持单次 attempt timeout：
+基础 sync API 不支持主动中断单次 attempt，即使 `RetryOptions` 配置了 `attempt_timeout`，普通 `run()` 也保持当前线程上的同步串行语义：
 
 ```rust
 pub fn run<T, F>(&self, operation: F) -> Result<T, RetryError<E>>
@@ -286,22 +297,26 @@ where
     F: FnMut() -> Result<T, E>;
 ```
 
-async 单次 timeout 用显式方法表达：
+async 单次 timeout 由 `run_async()` 读取 `RetryOptions.attempt_timeout`：
 
 ```rust
-pub async fn run_async_with_timeout<T, F, Fut>(
-    &self,
-    attempt_timeout: Duration,
-    operation: F,
-) -> Result<T, RetryError<E>>
+pub async fn run_async<T, F, Fut>(&self, operation: F) -> Result<T, RetryError<E>>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>;
 ```
 
-这样 sync `run()` 不会因为 executor 中存在 timeout 配置而产生“配置错误混入执行错误”的问题，也不会假装能中断同步闭包。
+blocking 单次 timeout 使用独立 API 表达：
 
-如果以后要支持 sync timeout，应提供单独 API，例如 `run_blocking_with_timeout()`，通过线程或进程隔离实现，但这不是第一阶段目标。
+```rust
+pub fn run_blocking_with_timeout<T, F>(&self, operation: F) -> Result<T, RetryError<E>>
+where
+    T: Send + 'static,
+    E: Send + 'static,
+    F: Fn(AttemptCancelToken) -> Result<T, E> + Send + Sync + 'static;
+```
+
+这样 sync `run()` 不会假装能中断同步闭包；blocking timeout 的语义也足够明确：超时后 executor 停止等待并标记 token cancelled，但 Rust 线程不能被安全强杀，旧 attempt 可能继续运行。
 
 ## 5. 推荐公开 API
 
@@ -434,7 +449,7 @@ let value = executor
     )?;
 ```
 
-若将来实现 `run_outcome`，终止错误才可能携带成功值 `T`；当前 crate 提供的 `run` / `run_async` / `run_async_with_timeout` 不受影响。
+若将来实现 `run_outcome`，终止错误才可能携带成功值 `T`；当前 crate 提供的 `run` / `run_async` / `run_blocking_with_timeout` 不受影响。
 
 ## 6. 执行流程
 
@@ -450,8 +465,9 @@ loop:
     return RetryError::MaxElapsedExceeded { last_failure, .. }
 
   result = run attempt
-    - async + run_async_with_timeout: tokio::time::timeout
-    - sync: direct call
+    - async + attempt_timeout: tokio::time::timeout
+    - blocking + attempt_timeout: worker thread + recv_timeout
+    - sync run(): direct call
 
   if Ok(value):
     调用 success 监听（SuccessContext）
@@ -486,7 +502,7 @@ loop:
 src/
   lib.rs                      # 对外 re-export：RetryExecutor、RetryOptions、Delay、Jitter、
                               # error 类型、events 中的 Context / RetryDecision / Listener 别名
-  retry_executor.rs           # RetryExecutor<E>：run / run_async / run_async_with_timeout
+  retry_executor.rs           # RetryExecutor<E>：run / run_async / run_blocking_with_timeout
   retry_executor_builder.rs   # RetryExecutorBuilder<E>
   retry_options.rs            # RetryOptions、校验、RetryOptions::from_config
   failure_action.rs           # 内部：同步路径失败后的下一步（重试 sleep 或终止）
@@ -584,7 +600,8 @@ match result {
 2. async operation 超过 `attempt_timeout` 后生成 `AttemptFailure::AttemptTimeout`。
 3. timeout 可按策略重试并最终成功。
 4. timeout 重试耗尽后返回 `AttemptsExceeded`，last failure 是 timeout。
-5. 基础 sync `run()` 没有 attempt timeout API，避免表达不可实现的中断能力。
+5. 基础 sync `run()` 不主动中断 attempt，避免表达不可实现的中断能力。
+6. blocking timeout 超时后取消 token 被标记，executor 可按策略继续。
 
 ### 10.3 监听器（Context + 失败引用）
 
@@ -605,7 +622,7 @@ match result {
 
 ## 11. 实施步骤（回顾）
 
-仓库内已完成等价于原「第 1–2 步 + 文档/测试」的主体工作：`RetryOptions` / `Delay` / `Jitter` / `RetryError<E>` / `AttemptFailure<E>`、`RetryExecutor<E>` 与 `run` / `run_async` / `run_async_with_timeout`、监听器与 Context 模型、集成测试与 README。
+仓库内已完成等价于原「第 1–2 步 + 文档/测试」的主体工作：`RetryOptions` / `Delay` / `Jitter` / `RetryError<E>` / `AttemptFailure<E>`、`RetryExecutor<E>` 与 `run` / `run_async` / `run_blocking_with_timeout`、监听器与 Context 模型、集成测试与 README。
 
 依赖方（如 `qubit-http`）的迁移与 §5.4 高级 API 属后续可选任务，不在本文强制范围。
 
