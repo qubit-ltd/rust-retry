@@ -80,3 +80,21 @@ impl fmt::Display for AttemptExecutorError {
 }
 
 impl Error for AttemptExecutorError {}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use super::AttemptExecutorError;
+
+    #[test]
+    fn from_spawn_error_prefixes_message() {
+        let io_error = io::Error::other("resource temporarily unavailable");
+        let error = AttemptExecutorError::from_spawn_error(io_error);
+        assert!(
+            error
+                .message()
+                .starts_with("failed to spawn retry worker thread: ")
+        );
+    }
+}

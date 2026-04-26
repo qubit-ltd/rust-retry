@@ -173,3 +173,18 @@ fn test_to_options_attempt_timeout_policy_overrides_default_timeout() {
         ))
     );
 }
+
+/// Verifies timeout policy without timeout millis errors when defaults disable timeout.
+#[test]
+fn test_to_options_attempt_timeout_policy_requires_timeout_without_default() {
+    let default =
+        RetryOptions::new(2, None, RetryDelay::none(), RetryJitter::none()).expect("valid default");
+    let mut values = sample_retry_config_values_none_delay();
+    values.attempt_timeout_policy = Some("abort".to_string());
+
+    let error = values
+        .to_options(&default)
+        .expect_err("policy alone should be rejected when default has no timeout");
+
+    assert!(error.to_string().contains("attempt_timeout_policy"));
+}

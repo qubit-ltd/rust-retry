@@ -376,3 +376,53 @@ fn test_isolate_listener_panics_suppresses_listener_panics() {
     assert_eq!(error.attempts(), 1);
     assert_eq!(error.last_error(), Some(&TestError("isolated")));
 }
+
+/// Verifies `options()` carries timeout policy into later timeout duration updates.
+#[test]
+fn test_options_sets_pending_attempt_timeout_policy() {
+    let options = RetryOptions::new_with_attempt_timeout(
+        2,
+        None,
+        RetryDelay::none(),
+        RetryJitter::none(),
+        Some(AttemptTimeoutOption::abort(Duration::from_millis(9))),
+    )
+    .expect("retry options should be valid");
+
+    let retry = Retry::<TestError>::builder()
+        .options(options)
+        .attempt_timeout(Some(Duration::from_millis(7)))
+        .build()
+        .expect("retry should build");
+
+    assert_eq!(
+        retry.options().attempt_timeout(),
+        Some(AttemptTimeoutOption::abort(Duration::from_millis(7)))
+    );
+}
+
+/// Verifies explicit timeout option also updates pending timeout policy.
+#[test]
+fn test_attempt_timeout_option_updates_pending_policy_for_later_duration() {
+    let retry = Retry::<TestError>::builder()
+        .attempt_timeout_option(Some(AttemptTimeoutOption::abort(Duration::from_millis(3))))
+        .attempt_timeout(Some(Duration::from_millis(5)))
+        .build()
+        .expect("retry should build");
+
+    assert_eq!(
+        retry.options().attempt_timeout(),
+        Some(AttemptTimeoutOption::abort(Duration::from_millis(5)))
+    );
+}
+
+/// Verifies `build()` surfaces validation errors from merged options.
+#[test]
+fn test_build_propagates_option_validation_errors() {
+    let error = Retry::<TestError>::builder()
+        .jitter_factor(1.5)
+        .build()
+        .expect_err("invalid jitter factor should be rejected");
+
+    assert!(error.to_string().contains("jitter"));
+}

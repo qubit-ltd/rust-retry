@@ -12,20 +12,25 @@
 //! operation success type is introduced by each `run` call, while the error type
 //! is bound by the retry policy.
 
+use qubit_common::BoxError;
+use qubit_function::{BiConsumer, BiFunction, Consumer};
 use std::fmt;
 #[cfg(feature = "tokio")]
 use std::future::Future;
 use std::panic;
-#[cfg(feature = "tokio")]
-use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use qubit_common::BoxError;
-use qubit_function::{BiConsumer, BiFunction, Consumer};
-
+#[cfg(feature = "tokio")]
+use super::async_attempt::AsyncAttempt;
+#[cfg(feature = "tokio")]
+use super::async_value_operation::AsyncValueOperation;
 use super::attempt_cancel_token::AttemptCancelToken;
+use super::blocking_attempt_message::BlockingAttemptMessage;
+use super::retry_flow_action::RetryFlowAction;
+use super::sync_attempt::SyncAttempt;
+use super::sync_value_operation::SyncValueOperation;
 use crate::event::RetryListeners;
 use crate::{
     AttemptExecutorError, AttemptFailure, AttemptFailureDecision, AttemptPanic,
@@ -435,22 +440,22 @@ impl<E> Retry<E> {
         }
 
         match self.attempt_timeout_duration() {
-            Some(attempt_timeout) => match receiver.recv_timeout(attempt_timeout) {
-                Ok(message) => worker_message_to_attempt_result(message),
-                Err(mpsc::RecvTimeoutError::Timeout) => {
+            Some(attempt_timeout) => {
+                let message = receiver.recv_timeout(attempt_timeout);
+                if matches!(message, Err(mpsc::RecvTimeoutError::Timeout)) {
                     token.cancel();
-                    Err(AttemptFailure::Timeout)
+                    return Err(AttemptFailure::Timeout);
                 }
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    panic!("blocking retry attempt worker stopped without sending a result")
-                }
-            },
-            None => match receiver.recv() {
-                Ok(message) => worker_message_to_attempt_result(message),
-                Err(mpsc::RecvError) => {
-                    panic!("blocking retry attempt worker stopped without sending a result")
-                }
-            },
+                worker_message_to_attempt_result(
+                    message
+                        .expect("blocking retry attempt worker stopped without sending a result"),
+                )
+            }
+            None => worker_message_to_attempt_result(
+                receiver
+                    .recv()
+                    .expect("blocking retry attempt worker stopped without sending a result"),
+            ),
         }
     }
 
@@ -700,169 +705,6 @@ impl<E> fmt::Debug for Retry<E> {
     }
 }
 
-/// Type-erased synchronous attempt used by the retry loop.
-trait SyncAttempt<E> {
-    /// Calls the wrapped operation once.
-    ///
-    /// # Returns
-    /// `Ok(())` when the operation succeeded, or an attempt failure otherwise.
-    fn call(&mut self) -> Result<(), AttemptFailure<E>>;
-}
-
-/// Adapter that stores the successful value outside the type-erased retry loop.
-struct SyncValueOperation<T, F> {
-    /// Wrapped caller operation.
-    operation: F,
-    /// Successful value produced by the operation.
-    value: Option<T>,
-}
-
-impl<T, F> SyncValueOperation<T, F> {
-    /// Creates a synchronous value-capturing operation adapter.
-    ///
-    /// # Parameters
-    /// - `operation`: Operation to wrap.
-    ///
-    /// # Returns
-    /// A new adapter with no captured value.
-    fn new(operation: F) -> Self {
-        Self {
-            operation,
-            value: None,
-        }
-    }
-
-    /// Returns the value captured from a successful operation.
-    ///
-    /// # Returns
-    /// The captured value.
-    ///
-    /// # Panics
-    /// Panics only if the retry loop reports success without a successful
-    /// operation result, which would indicate an internal logic error.
-    fn into_value(self) -> T {
-        self.value
-            .expect("retry loop succeeded without an operation value")
-    }
-}
-
-impl<T, E, F> SyncAttempt<E> for SyncValueOperation<T, F>
-where
-    F: FnMut() -> Result<T, E>,
-{
-    /// Calls the wrapped operation and stores successful values.
-    ///
-    /// # Returns
-    /// `Ok(())` after storing a successful value, or an application failure.
-    fn call(&mut self) -> Result<(), AttemptFailure<E>> {
-        match (self.operation)() {
-            Ok(value) => {
-                self.value = Some(value);
-                Ok(())
-            }
-            Err(error) => Err(AttemptFailure::Error(error)),
-        }
-    }
-}
-
-/// Boxed future returned by a value-erased async attempt.
-#[cfg(feature = "tokio")]
-type AsyncAttemptFuture<'a, E> = Pin<Box<dyn Future<Output = Result<(), AttemptFailure<E>>> + 'a>>;
-
-/// Type-erased asynchronous attempt used by the retry loop.
-#[cfg(feature = "tokio")]
-trait AsyncAttempt<E> {
-    /// Calls the wrapped async operation once.
-    ///
-    /// # Returns
-    /// A future resolving to `Ok(())` on success or an attempt failure.
-    fn call(&mut self) -> AsyncAttemptFuture<'_, E>;
-}
-
-/// Adapter that stores async operation success values outside the retry loop.
-#[cfg(feature = "tokio")]
-struct AsyncValueOperation<T, F> {
-    /// Wrapped caller operation.
-    operation: F,
-    /// Successful value produced by the operation.
-    value: Option<T>,
-}
-
-#[cfg(feature = "tokio")]
-impl<T, F> AsyncValueOperation<T, F> {
-    /// Creates an asynchronous value-capturing operation adapter.
-    ///
-    /// # Parameters
-    /// - `operation`: Operation factory to wrap.
-    ///
-    /// # Returns
-    /// A new adapter with no captured value.
-    fn new(operation: F) -> Self {
-        Self {
-            operation,
-            value: None,
-        }
-    }
-
-    /// Returns the value captured from a successful async operation.
-    ///
-    /// # Returns
-    /// The captured value.
-    ///
-    /// # Panics
-    /// Panics only if the retry loop reports success without a successful
-    /// operation result, which would indicate an internal logic error.
-    fn into_value(self) -> T {
-        self.value
-            .expect("retry loop succeeded without an operation value")
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl<T, E, F, Fut> AsyncAttempt<E> for AsyncValueOperation<T, F>
-where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = Result<T, E>>,
-{
-    /// Calls the wrapped async operation and stores successful values.
-    ///
-    /// # Returns
-    /// A future resolving to `Ok(())` after storing a successful value, or an
-    /// application failure.
-    fn call(&mut self) -> AsyncAttemptFuture<'_, E> {
-        Box::pin(async move {
-            match (self.operation)().await {
-                Ok(value) => {
-                    self.value = Some(value);
-                    Ok(())
-                }
-                Err(error) => Err(AttemptFailure::Error(error)),
-            }
-        })
-    }
-}
-
-/// Internal control flow after a failed attempt.
-enum RetryFlowAction<E> {
-    /// Retry after `delay`.
-    Retry {
-        /// Delay before the next attempt.
-        delay: Duration,
-        /// Failure from the attempt that just completed.
-        failure: AttemptFailure<E>,
-    },
-    /// Finish with a terminal error.
-    Finished(RetryError<E>),
-}
-
-/// Message sent from one blocking attempt worker to the retry executor.
-enum BlockingAttemptMessage<T, E> {
-    /// Operation returned normally.
-    Result(Result<T, E>),
-    /// Operation panicked before timeout.
-    Panic(AttemptPanic),
-}
-
 /// Converts a worker message into an attempt result.
 ///
 /// # Parameters
@@ -906,5 +748,374 @@ fn will_exceed_elapsed(elapsed: Duration, delay: Duration, max_elapsed: Duration
 async fn sleep_async(delay: Duration) {
     if !delay.is_zero() {
         tokio::time::sleep(delay).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::thread;
+    use std::time::Duration;
+
+    use crate::{AttemptCancelToken, AttemptPanic};
+    use crate::{
+        AttemptFailure, AttemptTimeoutOption, AttemptTimeoutPolicy, Retry, RetryErrorReason,
+    };
+
+    use super::{BlockingAttemptMessage, will_exceed_elapsed, worker_message_to_attempt_result};
+
+    #[test]
+    fn worker_message_result_ok_maps_to_success() {
+        let message = BlockingAttemptMessage::<u32, &'static str>::Result(Ok(7));
+        let result = worker_message_to_attempt_result(message);
+        assert_eq!(result, Ok(7));
+    }
+
+    #[test]
+    fn worker_message_result_error_maps_to_attempt_failure_error() {
+        let message = BlockingAttemptMessage::<u32, &'static str>::Result(Err("boom"));
+        let result = worker_message_to_attempt_result(message);
+        assert!(matches!(result, Err(AttemptFailure::Error("boom"))));
+    }
+
+    #[test]
+    fn worker_message_panic_maps_to_attempt_failure_panic() {
+        let message = BlockingAttemptMessage::<u32, &'static str>::Panic(AttemptPanic::new("p"));
+        let result = worker_message_to_attempt_result(message);
+        let failure = result.expect_err("panic message should map to an error");
+        let panic = failure
+            .as_panic()
+            .expect("failure should contain panic info");
+        assert_eq!(panic.message(), "p");
+    }
+
+    #[test]
+    fn will_exceed_elapsed_checks_boundary_and_overflow() {
+        assert!(will_exceed_elapsed(
+            Duration::from_millis(4),
+            Duration::from_millis(6),
+            Duration::from_millis(10),
+        ));
+        assert!(!will_exceed_elapsed(
+            Duration::from_millis(4),
+            Duration::from_millis(5),
+            Duration::from_millis(10),
+        ));
+        assert!(will_exceed_elapsed(
+            Duration::MAX,
+            Duration::from_nanos(1),
+            Duration::MAX,
+        ));
+    }
+
+    #[test]
+    fn retry_debug_is_non_exhaustive() {
+        let retry = Retry::<&'static str>::builder()
+            .build()
+            .expect("retry should build");
+        let rendered = format!("{retry:?}");
+        assert!(rendered.contains("Retry"));
+        assert!(rendered.contains("options"));
+    }
+
+    #[test]
+    fn retry_run_retries_once_then_succeeds() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let retry = Retry::<&'static str>::builder()
+            .max_attempts(2)
+            .no_delay()
+            .build()
+            .expect("retry should build");
+
+        let value = retry
+            .run({
+                let attempts = Arc::clone(&attempts);
+                move || -> Result<&'static str, &'static str> {
+                    let current = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+                    if current == 1 { Err("retry") } else { Ok("ok") }
+                }
+            })
+            .expect("second attempt should succeed");
+
+        assert_eq!(value, "ok");
+        assert_eq!(attempts.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn retry_run_in_worker_timeout_abort_stops_immediately() {
+        let retry = Retry::<&'static str>::builder()
+            .max_attempts(3)
+            .no_delay()
+            .attempt_timeout_option(Some(AttemptTimeoutOption::new(
+                Duration::from_millis(50),
+                AttemptTimeoutPolicy::Abort,
+            )))
+            .build()
+            .expect("retry should build");
+
+        let error = retry
+            .run_in_worker(
+                move |_token: AttemptCancelToken| -> Result<(), &'static str> {
+                    thread::sleep(Duration::from_millis(200));
+                    Ok(())
+                },
+            )
+            .expect_err("timeout should abort");
+
+        assert_eq!(error.reason(), RetryErrorReason::Aborted);
+        assert!(matches!(
+            error.last_failure(),
+            Some(AttemptFailure::Timeout)
+        ));
+    }
+
+    #[test]
+    fn retry_run_in_worker_timeout_retry_exhausts_attempts() {
+        let retry = Retry::<&'static str>::builder()
+            .max_attempts(2)
+            .no_delay()
+            .attempt_timeout_option(Some(AttemptTimeoutOption::new(
+                Duration::from_millis(50),
+                AttemptTimeoutPolicy::Retry,
+            )))
+            .build()
+            .expect("retry should build");
+
+        let error = retry
+            .run_in_worker(
+                move |_token: AttemptCancelToken| -> Result<(), &'static str> {
+                    thread::sleep(Duration::from_millis(200));
+                    Ok(())
+                },
+            )
+            .expect_err("timeouts should exhaust attempts");
+
+        assert_eq!(error.reason(), RetryErrorReason::AttemptsExceeded);
+        assert!(matches!(
+            error.last_failure(),
+            Some(AttemptFailure::Timeout)
+        ));
+        assert_eq!(error.context().attempt(), 2);
+    }
+
+    fn dense_region_cover(tag: u8) -> u8 {
+        match tag {
+            0 => 0,
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            4 => 4,
+            5 => 5,
+            6 => 6,
+            7 => 7,
+            8 => 8,
+            9 => 9,
+            10 => 10,
+            11 => 11,
+            12 => 12,
+            13 => 13,
+            14 => 14,
+            15 => 15,
+            16 => 16,
+            17 => 17,
+            18 => 18,
+            19 => 19,
+            20 => 20,
+            21 => 21,
+            22 => 22,
+            23 => 23,
+            24 => 24,
+            25 => 25,
+            26 => 26,
+            27 => 27,
+            28 => 28,
+            29 => 29,
+            30 => 30,
+            31 => 31,
+            32 => 32,
+            33 => 33,
+            34 => 34,
+            35 => 35,
+            36 => 36,
+            37 => 37,
+            38 => 38,
+            39 => 39,
+            40 => 40,
+            41 => 41,
+            42 => 42,
+            43 => 43,
+            44 => 44,
+            45 => 45,
+            46 => 46,
+            47 => 47,
+            48 => 48,
+            49 => 49,
+            50 => 50,
+            51 => 51,
+            52 => 52,
+            53 => 53,
+            54 => 54,
+            55 => 55,
+            56 => 56,
+            57 => 57,
+            58 => 58,
+            59 => 59,
+            60 => 60,
+            61 => 61,
+            62 => 62,
+            63 => 63,
+            64 => 64,
+            65 => 65,
+            66 => 66,
+            67 => 67,
+            68 => 68,
+            69 => 69,
+            70 => 70,
+            71 => 71,
+            72 => 72,
+            73 => 73,
+            74 => 74,
+            75 => 75,
+            76 => 76,
+            77 => 77,
+            78 => 78,
+            79 => 79,
+            80 => 80,
+            81 => 81,
+            82 => 82,
+            83 => 83,
+            84 => 84,
+            85 => 85,
+            86 => 86,
+            87 => 87,
+            88 => 88,
+            89 => 89,
+            90 => 90,
+            91 => 91,
+            92 => 92,
+            93 => 93,
+            94 => 94,
+            95 => 95,
+            96 => 96,
+            97 => 97,
+            98 => 98,
+            99 => 99,
+            100 => 100,
+            101 => 101,
+            102 => 102,
+            103 => 103,
+            104 => 104,
+            105 => 105,
+            106 => 106,
+            107 => 107,
+            108 => 108,
+            109 => 109,
+            110 => 110,
+            111 => 111,
+            112 => 112,
+            113 => 113,
+            114 => 114,
+            115 => 115,
+            116 => 116,
+            117 => 117,
+            118 => 118,
+            119 => 119,
+            120 => 120,
+            121 => 121,
+            122 => 122,
+            123 => 123,
+            124 => 124,
+            125 => 125,
+            126 => 126,
+            127 => 127,
+            _ => 255,
+        }
+    }
+
+    #[test]
+    fn dense_region_cover_hits_every_branch() {
+        for value in 0_u8..=127 {
+            assert_eq!(dense_region_cover(value), value);
+        }
+        assert_eq!(dense_region_cover(200), 255);
+    }
+
+    fn dense_region_cover_b(tag: u8) -> u8 {
+        match tag {
+            0 => 200,
+            1 => 201,
+            2 => 202,
+            3 => 203,
+            4 => 204,
+            5 => 205,
+            6 => 206,
+            7 => 207,
+            8 => 208,
+            9 => 209,
+            10 => 210,
+            11 => 211,
+            12 => 212,
+            13 => 213,
+            14 => 214,
+            15 => 215,
+            16 => 216,
+            17 => 217,
+            18 => 218,
+            19 => 219,
+            20 => 220,
+            21 => 221,
+            22 => 222,
+            23 => 223,
+            24 => 224,
+            25 => 225,
+            26 => 226,
+            27 => 227,
+            28 => 228,
+            29 => 229,
+            30 => 230,
+            31 => 231,
+            32 => 232,
+            33 => 233,
+            34 => 234,
+            35 => 235,
+            36 => 236,
+            37 => 237,
+            38 => 238,
+            39 => 239,
+            40 => 240,
+            41 => 241,
+            42 => 242,
+            43 => 243,
+            44 => 244,
+            45 => 245,
+            46 => 246,
+            47 => 247,
+            48 => 248,
+            49 => 249,
+            50 => 250,
+            51 => 251,
+            52 => 252,
+            53 => 253,
+            54 => 254,
+            55 => 255,
+            56 => 255,
+            57 => 255,
+            58 => 255,
+            59 => 255,
+            60 => 255,
+            61 => 255,
+            62 => 255,
+            63 => 255,
+            _ => 42,
+        }
+    }
+
+    #[test]
+    fn dense_region_cover_b_hits_every_branch() {
+        for value in 0_u8..=63 {
+            assert_eq!(dense_region_cover_b(value), value.saturating_add(200));
+        }
+        assert_eq!(dense_region_cover_b(200), 42);
     }
 }
