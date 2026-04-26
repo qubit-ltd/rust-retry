@@ -6,11 +6,11 @@
  *    All rights reserved.
  *
  ******************************************************************************/
-//! `parse_display` bridge for [`std::time::Duration`] fields on [`RetryDelay`].
+//! `parse_display` bridge for [`std::time::Duration`] fields on
+//! [`RetryDelay`](crate::RetryDelay).
 //!
-//! The [`RetryDelay`](crate::RetryDelay) top-level module docs describe the full
-//! text form; this type only wires each duration field to
-//! [`qubit_common::serde::duration_with_unit`].
+//! See [`RetryDelay`](crate::RetryDelay) for the full text form; this type only
+//! wires each duration field to [`qubit_common::serde::duration_with_unit`].
 
 use std::fmt;
 use std::time::Duration;
