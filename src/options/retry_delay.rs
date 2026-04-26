@@ -28,46 +28,15 @@
 //! suffixes, etc.; see that module). [`std::fmt::Display`] normalizes to whole
 //! millisecond + `ms` for those fields.
 
-use std::fmt;
 use std::str::FromStr;
 use std::time::Duration;
 
-use parse_display::{Display, DisplayFormat, FromStr, FromStrFormat, ParseError};
-use qubit_common::serde::duration_with_unit;
+use parse_display::{Display, FromStr};
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
+use super::retry_delay_duration_format::RetryDelayDurationFormat;
 use crate::constants::DEFAULT_RETRY_DELAY;
-
-/// Bridges `parse_display` for [`Duration`] fields to [`duration_with_unit`].
-/// `regex` returns `None` so the default non-greedy `.*?` capture is used, which
-/// supports multi-unit text and characters such as `µ` in `µs` (unlike a strict ASCII token).
-struct RetryDelayDurationFormat;
-
-impl DisplayFormat<Duration> for RetryDelayDurationFormat {
-    /// Same output as [`duration_with_unit::format`]: saturated whole milliseconds and `ms`.
-    fn write(&self, f: &mut fmt::Formatter<'_>, value: &Duration) -> fmt::Result {
-        f.write_str(&duration_with_unit::format(value))
-    }
-}
-
-impl FromStrFormat<Duration> for RetryDelayDurationFormat {
-    type Err = ParseError;
-
-    /// Uses [`duration_with_unit::parse`]. Dynamic parse errors are collapsed to a
-    /// fixed [`parse_display::ParseError`] because its message is `&'static str` only.
-    fn parse(&self, s: &str) -> Result<Duration, Self::Err> {
-        duration_with_unit::parse(s).map_err(|_| {
-            ParseError::with_message(
-                "invalid retry delay duration: expected a value accepted by `duration_with_unit`",
-            )
-        })
-    }
-
-    fn regex(&self) -> Option<String> {
-        None
-    }
-}
 
 /// Base delay strategy before jitter is applied.
 ///
