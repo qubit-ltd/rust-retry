@@ -18,22 +18,23 @@ use serde::{Deserialize, Serialize};
 /// Context emitted for retry lifecycle events.
 ///
 /// `attempt` is one-based for attempt-related events and zero when a retry flow
-/// stops before any attempt is executed. `total_elapsed` measures the whole retry
-/// flow. `attempt_elapsed` is set after an attempt completes and is zero before
-/// an attempt starts.
+/// stops before any attempt is executed. `total_elapsed` is cumulative user
+/// operation execution time only; listener and retry-sleep time are excluded.
+/// `attempt_elapsed` is set after an attempt completes and is zero before an
+/// attempt starts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RetryContext {
     /// Current attempt number, or zero if no attempt has run.
     attempt: u32,
     /// Configured maximum attempts.
     max_attempts: u32,
-    /// Configured maximum total elapsed time.
+    /// Configured maximum cumulative user operation time.
     max_elapsed: Option<Duration>,
-    /// Elapsed time since the retry flow started.
+    /// Cumulative user operation time consumed by this retry flow.
     total_elapsed: Duration,
     /// Elapsed time spent in the current attempt.
     attempt_elapsed: Duration,
-    /// Timeout configured for the current attempt.
+    /// Effective timeout configured for the current attempt.
     attempt_timeout: Option<Duration>,
     /// Delay selected before the next attempt, when known.
     next_delay: Option<Duration>,
@@ -48,10 +49,10 @@ impl RetryContext {
     /// - `attempt`: Current attempt number, starting at 1, or 0 before any
     ///   attempt has run.
     /// - `max_attempts`: Configured maximum attempts.
-    /// - `max_elapsed`: Optional total elapsed-time budget.
-    /// - `total_elapsed`: Elapsed time since the retry flow started.
+    /// - `max_elapsed`: Optional cumulative user operation time budget.
+    /// - `total_elapsed`: Cumulative user operation time consumed by the flow.
     /// - `attempt_elapsed`: Elapsed time for the current attempt.
-    /// - `attempt_timeout`: Optional timeout for the current attempt.
+    /// - `attempt_timeout`: Optional effective timeout for the current attempt.
     ///
     /// # Returns
     /// A retry context with no selected next delay or retry-after hint.
@@ -102,7 +103,7 @@ impl RetryContext {
         self.max_attempts.saturating_sub(1)
     }
 
-    /// Returns the optional total elapsed-time budget.
+    /// Returns the optional cumulative user operation time budget.
     ///
     /// # Returns
     /// `Some(Duration)` for bounded retry flows, or `None` for unlimited flows.
@@ -111,10 +112,11 @@ impl RetryContext {
         self.max_elapsed
     }
 
-    /// Returns elapsed time since the retry flow started.
+    /// Returns cumulative user operation time consumed by the retry flow.
     ///
     /// # Returns
-    /// Total elapsed time observed at this event.
+    /// Total user operation time observed at this event. Listener execution and
+    /// retry sleeps are excluded.
     #[inline]
     pub fn total_elapsed(&self) -> Duration {
         self.total_elapsed
@@ -129,10 +131,11 @@ impl RetryContext {
         self.attempt_elapsed
     }
 
-    /// Returns the timeout configured for the current attempt.
+    /// Returns the effective timeout configured for the current attempt.
     ///
     /// # Returns
-    /// `Some(Duration)` when this retry flow has a per-attempt timeout.
+    /// `Some(Duration)` when this attempt is bounded by configured timeout or by
+    /// the remaining max-elapsed budget.
     #[inline]
     pub fn attempt_timeout(&self) -> Option<Duration> {
         self.attempt_timeout
@@ -141,8 +144,8 @@ impl RetryContext {
     /// Returns the delay selected before the next attempt.
     ///
     /// # Returns
-    /// `Some(Duration)` in retry-scheduled events and terminal errors where a
-    /// selected delay would exceed the elapsed-time budget; otherwise `None`.
+    /// `Some(Duration)` in retry-scheduled events after a next delay has been
+    /// selected; otherwise `None`.
     #[inline]
     pub fn next_delay(&self) -> Option<Duration> {
         self.next_delay

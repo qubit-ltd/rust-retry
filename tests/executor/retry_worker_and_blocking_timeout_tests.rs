@@ -94,6 +94,79 @@ fn test_run_in_worker_with_timeout_allows_fast_success() {
     assert_eq!(WORKER_THREAD_ID_CALLS.load(Ordering::SeqCst), 1);
 }
 
+/// Verifies max elapsed caps an in-flight worker attempt without a configured timeout.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_run_in_worker_max_elapsed_caps_in_flight_attempt_without_configured_timeout() {
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(1)
+        .max_elapsed(Some(Duration::from_millis(20)))
+        .no_delay()
+        .build()
+        .expect("retry should build");
+
+    let started = std::time::Instant::now();
+    let error = retry
+        .run_in_worker(|_token: AttemptCancelToken| {
+            thread::sleep(Duration::from_millis(120));
+            Ok::<_, TestError>("late")
+        })
+        .expect_err("max elapsed should stop the in-flight worker attempt");
+    let elapsed = started.elapsed();
+
+    assert_eq!(error.reason(), RetryErrorReason::MaxElapsedExceeded);
+    assert_eq!(error.attempts(), 1);
+    assert!(matches!(
+        error.last_failure(),
+        Some(AttemptFailure::Timeout)
+    ));
+    assert_eq!(
+        error.context().attempt_timeout(),
+        Some(Duration::from_millis(20))
+    );
+    assert!(
+        elapsed < Duration::from_millis(100),
+        "max elapsed should stop before the worker finishes, elapsed: {elapsed:?}"
+    );
+}
+
+/// Verifies ordinary worker failures can retry while max elapsed bounds attempts.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_run_in_worker_error_before_remaining_elapsed_timeout_can_retry() {
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(2)
+        .max_elapsed(Some(Duration::from_millis(200)))
+        .no_delay()
+        .build()
+        .expect("retry should build");
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let operation_attempts = Arc::clone(&attempts);
+
+    let value = retry
+        .run_in_worker(move |_token: AttemptCancelToken| {
+            if operation_attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+                Err(TestError("transient"))
+            } else {
+                Ok("done")
+            }
+        })
+        .expect("ordinary error should retry before remaining elapsed timeout");
+
+    assert_eq!(value, "done");
+    assert_eq!(attempts.load(Ordering::SeqCst), 2);
+}
+
 /// Verifies worker panics become retry failures and abort by default.
 ///
 /// # Parameters

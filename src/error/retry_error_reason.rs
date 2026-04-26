@@ -17,6 +17,6 @@ pub enum RetryErrorReason {
     Aborted,
     /// No attempts remain.
     AttemptsExceeded,
-    /// The total elapsed-time budget was exhausted.
+    /// The cumulative user operation elapsed-time budget was exhausted.
     MaxElapsedExceeded,
 }

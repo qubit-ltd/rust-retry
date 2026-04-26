@@ -31,7 +31,7 @@ use crate::{
 /// the retry decision, or return [`AttemptFailureDecision::UseDefault`] to let
 /// the policy decide from configured limits and delay strategy.
 pub struct RetryBuilder<E = BoxError> {
-    /// Retry limits, delay strategy, jitter, and elapsed-time budget.
+    /// Retry limits, delay strategy, jitter, and user operation elapsed budget.
     options: RetryOptions,
     /// Pending policy used when timeout duration is configured later.
     pending_attempt_timeout_policy: AttemptTimeoutPolicy,
@@ -112,10 +112,10 @@ impl<E> RetryBuilder<E> {
         self.max_attempts(max_retries.saturating_add(1))
     }
 
-    /// Sets the maximum total elapsed time.
+    /// Sets the maximum cumulative user operation time.
     ///
     /// # Parameters
-    /// - `max_elapsed`: Optional total elapsed-time budget.
+    /// - `max_elapsed`: Optional cumulative user operation time budget.
     ///
     /// # Returns
     /// The updated builder.

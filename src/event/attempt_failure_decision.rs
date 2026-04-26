@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 
 /// Decision returned by a retry failure listener after inspecting a failure.
 ///
-/// Explicit retry decisions still obey attempt and elapsed-time limits.
+/// Explicit retry decisions still obey attempt and cumulative user operation
+/// elapsed-time limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AttemptFailureDecision {
     /// Use the retry policy's default decision for this failure.

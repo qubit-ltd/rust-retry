@@ -32,16 +32,16 @@ use crate::{RetryConfigError, RetryDelay, RetryJitter};
 /// Immutable retry option snapshot used by [`crate::Retry`].
 ///
 /// `RetryOptions` owns all executor configuration that is independent of the
-/// application error type: attempt limits, total elapsed-time budget, delay
-/// strategy, and jitter strategy. Construction validates the delay and jitter
-/// values before an executor can use them.
+/// application error type: attempt limits, cumulative user operation elapsed
+/// budget, delay strategy, and jitter strategy. Construction validates the delay
+/// and jitter values before an executor can use them.
 ///
 /// Author: Haixing Hu
 #[derive(Debug, Clone, PartialEq)]
 pub struct RetryOptions {
     /// Maximum attempts, including the initial attempt.
     pub(crate) max_attempts: NonZeroU32,
-    /// Maximum total elapsed time for the retry flow, in milliseconds.
+    /// Maximum cumulative user operation time for the retry flow.
     pub(crate) max_elapsed: Option<Duration>,
     /// Base delay strategy between attempts.
     pub(crate) delay: RetryDelay,
@@ -67,7 +67,7 @@ impl RetryOptions {
         self.max_attempts.get()
     }
 
-    /// Returns maximum total elapsed-time budget.
+    /// Returns maximum cumulative user operation time budget.
     ///
     /// # Parameters
     /// This method has no parameters.
@@ -132,8 +132,8 @@ impl RetryOptions {
     /// # Parameters
     /// - `max_attempts`: Maximum number of attempts, including the first call.
     ///   Must be greater than zero.
-    /// - `max_elapsed`: Optional total elapsed-time budget for all attempts
-    ///   and sleeps.
+    /// - `max_elapsed`: Optional cumulative user operation time budget for all
+    ///   attempts. Listener execution and retry sleeps are excluded.
     /// - `delay`: Base delay strategy used between attempts.
     /// - `jitter`: RetryJitter strategy applied to each base delay.
     ///
@@ -157,8 +157,8 @@ impl RetryOptions {
     /// # Parameters
     /// - `max_attempts`: Maximum number of attempts, including the first call.
     ///   Must be greater than zero.
-    /// - `max_elapsed`: Optional total elapsed-time budget for all attempts
-    ///   and sleeps.
+    /// - `max_elapsed`: Optional cumulative user operation time budget for all
+    ///   attempts. Listener execution and retry sleeps are excluded.
     /// - `delay`: Base delay strategy used between attempts.
     /// - `jitter`: RetryJitter strategy applied to each base delay.
     /// - `attempt_timeout`: Optional per-attempt timeout settings.
@@ -321,8 +321,8 @@ impl Default for RetryOptions {
     /// Creates the default retry options.
     ///
     /// # Returns
-    /// Options with five attempts, no total elapsed-time limit, exponential
-    /// delay, and no jitter.
+    /// Options with five attempts, no cumulative user operation time limit,
+    /// exponential delay, and no jitter.
     ///
     /// # Parameters
     /// This function has no parameters.

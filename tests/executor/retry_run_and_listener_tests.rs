@@ -511,7 +511,7 @@ fn test_max_elapsed_can_stop_before_first_attempt() {
     assert!(error.last_failure().is_none());
 }
 
-/// Verifies retry listener time is counted before sleeping for the next attempt.
+/// Verifies hook and retry sleep time do not count against elapsed budget.
 ///
 /// # Parameters
 /// This test has no parameters.
@@ -519,20 +519,74 @@ fn test_max_elapsed_can_stop_before_first_attempt() {
 /// # Returns
 /// This test returns nothing.
 #[test]
-fn test_on_retry_listener_time_counts_against_elapsed_budget_before_sleep() {
+fn test_hook_and_retry_sleep_time_do_not_count_against_elapsed_budget() {
+    let success_elapsed = Arc::new(Mutex::new(None));
+    let success_elapsed_events = Arc::clone(&success_elapsed);
+    let retry = Retry::<TestError>::builder()
+        .max_attempts(2)
+        .max_elapsed(Some(Duration::from_millis(10)))
+        .fixed_delay(Duration::from_millis(25))
+        .before_attempt(|_context: &RetryContext| {
+            std::thread::sleep(Duration::from_millis(25));
+        })
+        .on_retry(
+            |_failure: &AttemptFailure<TestError>, _context: &RetryContext| {
+                std::thread::sleep(Duration::from_millis(25));
+            },
+        )
+        .on_success(move |context: &RetryContext| {
+            *success_elapsed_events
+                .lock()
+                .expect("success elapsed should be lockable") = Some(context.total_elapsed());
+        })
+        .build()
+        .expect("retry should build");
+
+    let mut attempts = 0;
+    let value = retry
+        .run(|| {
+            attempts += 1;
+            if attempts == 1 {
+                Err(TestError("retry-once"))
+            } else {
+                Ok("done")
+            }
+        })
+        .expect("hook and retry sleep time should not exhaust elapsed budget");
+
+    assert_eq!(value, "done");
+    assert_eq!(attempts, 2);
+    assert!(
+        success_elapsed
+            .lock()
+            .expect("success elapsed should be lockable")
+            .expect("success listener should run")
+            < Duration::from_millis(10)
+    );
+}
+
+/// Verifies retry listener time does not count against elapsed budget.
+///
+/// # Parameters
+/// This test has no parameters.
+///
+/// # Returns
+/// This test returns nothing.
+#[test]
+fn test_on_retry_listener_time_does_not_count_against_elapsed_budget() {
     let retry_events = Arc::new(Mutex::new(Vec::new()));
     let scheduled_events = Arc::clone(&retry_events);
     let retry = Retry::<TestError>::builder()
-        .max_attempts(3)
-        .max_elapsed(Some(Duration::from_millis(600)))
-        .fixed_delay(Duration::from_millis(500))
+        .max_attempts(2)
+        .max_elapsed(Some(Duration::from_millis(10)))
+        .fixed_delay(Duration::from_millis(25))
         .on_retry(
             move |failure: &AttemptFailure<TestError>, context: &RetryContext| {
                 scheduled_events
                     .lock()
                     .expect("retry events should be lockable")
                     .push((failure.as_error().cloned(), context.next_delay()));
-                std::thread::sleep(Duration::from_millis(120));
+                std::thread::sleep(Duration::from_millis(25));
             },
         )
         .build()
@@ -545,28 +599,25 @@ fn test_on_retry_listener_time_counts_against_elapsed_budget_before_sleep() {
             attempts += 1;
             Err(TestError("slow-listener"))
         })
-        .expect_err("listener time should exhaust elapsed budget before sleep");
+        .expect_err("attempts should be exhausted after listener and sleep time are excluded");
     let elapsed = started.elapsed();
 
-    assert_eq!(error.reason(), RetryErrorReason::MaxElapsedExceeded);
-    assert_eq!(error.attempts(), 1);
-    assert_eq!(attempts, 1);
+    assert_eq!(error.reason(), RetryErrorReason::AttemptsExceeded);
+    assert_eq!(error.attempts(), 2);
+    assert_eq!(attempts, 2);
     assert_eq!(error.last_error(), Some(&TestError("slow-listener")));
-    assert_eq!(
-        error.context().next_delay(),
-        Some(Duration::from_millis(500))
-    );
+    assert_eq!(error.context().next_delay(), None);
     assert_eq!(
         *retry_events
             .lock()
             .expect("retry events should be lockable"),
         vec![(
             Some(TestError("slow-listener")),
-            Some(Duration::from_millis(500))
+            Some(Duration::from_millis(25))
         )]
     );
     assert!(
-        elapsed < Duration::from_millis(450),
-        "retry should stop before sleeping for the scheduled delay, elapsed: {elapsed:?}"
+        elapsed >= Duration::from_millis(50),
+        "test should exercise retry listener and sleep wall time, elapsed: {elapsed:?}"
     );
 }

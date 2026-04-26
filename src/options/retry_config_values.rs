@@ -49,9 +49,9 @@ use crate::constants::{
 pub struct RetryConfigValues {
     /// Optional maximum attempts value.
     pub max_attempts: Option<u32>,
-    /// Optional elapsed-time budget in milliseconds.
+    /// Optional cumulative user operation elapsed-time budget in milliseconds.
     pub max_elapsed_millis: Option<u64>,
-    /// Optional explicit switch for unlimited elapsed-time budget.
+    /// Optional explicit switch for unlimited user operation elapsed-time budget.
     pub max_elapsed_unlimited: Option<bool>,
     /// Optional attempt timeout in milliseconds.
     pub attempt_timeout_millis: Option<u64>,
@@ -141,7 +141,7 @@ impl RetryConfigValues {
         )
     }
 
-    /// Resolves the elapsed-time budget.
+    /// Resolves the cumulative user operation elapsed-time budget.
     ///
     /// # Parameters
     /// - `default`: Fallback when `max_elapsed_millis` is absent from config.

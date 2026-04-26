@@ -184,11 +184,14 @@ fn test_retry_error_display_formats_terminal_reasons() {
     let elapsed_with_failure = Retry::<TestError>::builder()
         .max_attempts(2)
         .max_elapsed(Some(Duration::from_millis(5)))
-        .fixed_delay(Duration::from_millis(5))
+        .no_delay()
         .build()
         .expect("retry should build")
-        .run(|| -> Result<(), TestError> { Err(TestError("slow")) })
-        .expect_err("retry delay should exceed elapsed budget");
+        .run(|| -> Result<(), TestError> {
+            std::thread::sleep(Duration::from_millis(10));
+            Err(TestError("slow"))
+        })
+        .expect_err("operation execution should exceed elapsed budget");
     assert_eq!(
         elapsed_with_failure.to_string(),
         "retry max elapsed exceeded after 1 attempt(s); last failure: slow"
