@@ -221,6 +221,10 @@ fn test_retry_error_display_formats_terminal_reasons() {
         unsupported.to_string(),
         "run() does not support attempt timeout; use run_async() or run_in_worker()"
     );
+    assert_eq!(
+        unsupported.attempt_timeout_source(),
+        Some(qubit_retry::AttemptTimeoutSource::Configured)
+    );
 
     let worker_still_running = Retry::<TestError>::builder()
         .max_attempts(2)
